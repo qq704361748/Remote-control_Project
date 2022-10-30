@@ -4,6 +4,7 @@
 #include "pch.h"
 #include "framework.h"
 #include "RemoteCtrl.h"
+#include "ServerSocket.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -22,6 +23,8 @@ int main()
 
     HMODULE hModule = ::GetModuleHandle(nullptr);
 
+    
+   
     if (hModule != nullptr)
     {
         // 初始化 MFC 并在失败时显示错误
@@ -33,7 +36,33 @@ int main()
         }
         else
         {
-            // TODO: 在此处为应用程序的行为编写代码。
+            // TODO: socket，bind,listen,accept,read,write,close
+            
+
+           CServerSocket* pserver =  CServerSocket::getInstance();
+           int count = 0;
+           if (pserver->InitSocket() == false)
+           {
+               MessageBox(NULL, TEXT("网络初始化异常，未能成功初始化，请检查网络"), TEXT("网络初始化失败"), MB_OK | MB_ICONERROR);
+               exit(0);
+           }
+            while (CServerSocket::getInstance() != NULL)
+            {
+	            
+                if(pserver->AcceptClient()==false)
+                {
+	                if (count >=3)
+	                {
+                        MessageBox(NULL, TEXT("多次无法正常接入用户，结束程序"), TEXT("接入用户失败"), MB_OK | MB_ICONERROR);
+                        exit(0);
+	                }
+                    MessageBox(NULL, TEXT("无法正常接入用户，自动重试"), TEXT("接入用户失败"), MB_OK | MB_ICONERROR);
+                    count++;
+                }
+
+                int ret = pserver->DealCommand();
+                //TODO:
+            }
         }
     }
     else
