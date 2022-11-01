@@ -95,6 +95,16 @@ bool CServerSocket::Send(CPacket& pack)
 	return send(m_client, pack.Data(), pack.Size(), 0) > 0;
 }
 
+bool CServerSocket::GetFilePath(std::string& strPath)
+{
+	if(m_packet.sCmd == 2)  //当命令为2时，即为获取文件目录
+	{
+		strPath = m_packet.strData;
+		return true;
+	}
+	return false;
+}
+
 
 CServerSocket::CServerSocket(const CServerSocket& ss)
 {

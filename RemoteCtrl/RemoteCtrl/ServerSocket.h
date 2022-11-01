@@ -38,6 +38,8 @@ public:
 	int                   DealCommand();                      //处理接收到的消息
 	bool                  Send(const char* pData, int nSize); //发送消息
 	bool                  Send(CPacket& pack);                //发送数据
+	bool GetFilePath(std::string& strPath);
+
 private:
 	SOCKET  m_sock;   //服务端用于监听的socket
 	SOCKET  m_client; //用于服务端收发消息的socket
