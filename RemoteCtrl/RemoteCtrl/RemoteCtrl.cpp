@@ -1,6 +1,7 @@
 ﻿// RemoteCtrl.cpp : 此文件包含 "main" 函数。程序执行将在此处开始并结束。
 //
 
+
 #include "pch.h"
 #include "framework.h"
 #include "RemoteCtrl.h"
@@ -13,8 +14,8 @@
 #define new DEBUG_NEW
 #endif
 
-// #pragma comment(linker, "/subsystem:windows /ENTRY:mainCRTStartup")
 
+//#pragma warning(disable:4966)
 
 // #pragma comment ( linker, "/subsystem:windows /entry:WinMainCRTStartup" )
 // #pragma comment ( linker, "/subsystem:windows /ENTRY:mainCRTStartup" )
@@ -67,19 +68,17 @@ typedef struct file_info
 {
 	file_info()
 	{
-		IsInvalid = FALSE;
+		IsInvalid   = FALSE;
 		IsDirectory = -1;
-		HasNext = TRUE;
+		HasNext     = TRUE;
 		memset(szFileName, 0, sizeof(szFileName));
 	}
-	BOOL IsInvalid;  //是否有效
+
+	BOOL IsInvalid;   //是否有效
 	BOOL IsDirectory; //是否为目录 0否，1是
-	BOOL HasNext;  //是否还有后续 0没有，1有
+	BOOL HasNext;     //是否还有后续 0没有，1有
 	char szFileName[256];
-	
-}FILEINFO,*PFILEINFO;
-
-
+}        FILEINFO, *PFILEINFO;
 
 
 int MakeDirectoryInfo() //获取指定文件夹下的信息
@@ -94,12 +93,12 @@ int MakeDirectoryInfo() //获取指定文件夹下的信息
 
 	if (_chdir(strPath.c_str()) != 0) {
 		FILEINFO finfo;
-		finfo.IsInvalid = TRUE;
+		finfo.IsInvalid   = TRUE;
 		finfo.IsDirectory = TRUE;
-		finfo.HasNext = FALSE;
+		finfo.HasNext     = FALSE;
 		memcpy(finfo.szFileName, strPath.c_str(), strPath.size());
 		//listFileInfos.push_back(finfo);
-		CPacket pack(2, (BYTE*) &finfo, sizeof(finfo));
+		CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));
 		CServerSocket::getInstance()->Send(pack);
 		OutputDebugString(TEXT("该目录无法访问！"));
 		return -2;
@@ -124,6 +123,53 @@ int MakeDirectoryInfo() //获取指定文件夹下的信息
 	FILEINFO finfo;
 	finfo.HasNext = FALSE;
 	CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));
+	CServerSocket::getInstance()->Send(pack);
+	return 0;
+}
+
+int RunFile()
+{
+	string strPath;
+	CServerSocket::getInstance()->GetFilePath(strPath);
+	ShellExecuteA(NULL, NULL, strPath.c_str(), NULL, NULL, SW_SHOWNORMAL);
+	CPacket pack(3, NULL, 0);
+	CServerSocket::getInstance()->Send(pack);
+	return 0;
+}
+
+
+int DownloadFile()
+{
+	string strPath;
+	CServerSocket::getInstance()->GetFilePath(strPath);
+	long long data  = 0;
+	FILE*     pFile = fopen(strPath.c_str(), "rb");
+	if (pFile == NULL) {
+		CPacket pack(4, (BYTE*)&data, 8);
+		CServerSocket::getInstance()->Send(pack);
+		return -1;
+	}
+
+	if (pFile != NULL) {
+
+
+		fseek(pFile, 0, SEEK_END);
+
+		data = _ftelli64(pFile);
+		CPacket head(4, (BYTE*)&data, 8);
+		fseek(pFile, 0, SEEK_SET);
+
+		char   buffer[1024] = "";
+		size_t rlen         = 0;
+		do {
+			rlen = fread(buffer, 1, 1024, pFile);
+			CPacket pack(4, (BYTE*)&buffer, rlen);
+			CServerSocket::getInstance()->Send(pack);
+		} while (rlen >= 1024);
+
+		fclose(pFile);
+	}
+	CPacket pack(4, NULL, 0);
 	CServerSocket::getInstance()->Send(pack);
 	return 0;
 }
@@ -175,6 +221,10 @@ int main()
 			case 1: MakeDriverInfo(); //查看磁盘分区
 				break;
 			case 2: MakeDirectoryInfo(); //查看指定目录下的文件
+				break;
+			case 3: RunFile(); //打开文件
+				break;
+			case 4: DownloadFile(); //下载文件
 				break;
 			}
 
