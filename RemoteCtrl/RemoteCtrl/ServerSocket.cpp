@@ -49,13 +49,15 @@ bool CServerSocket::InitSocket()
 bool CServerSocket::AcceptClient()
 {
 	SOCKADDR_IN client_adr;
-	int         cli_sz = sizeof(client_adr);
-	m_client           = accept(m_sock, (sockaddr*)&client_adr, &cli_sz);
+
+	int cli_sz = sizeof(client_adr);
+	m_client   = accept(m_sock, (sockaddr*)&client_adr, &cli_sz);
 	if (m_client == -1) return false;
 	return true;
 }
 
 #define BUFFER_SIZE 4096
+
 int CServerSocket::DealCommand()
 {
 	if (m_client == -1) return -1;
@@ -65,15 +67,15 @@ int CServerSocket::DealCommand()
 	size_t index = 0;
 	while (true)
 	{
-		size_t len = recv(m_client, buffer+index, BUFFER_SIZE -index, 0);
+		size_t len = recv(m_client, buffer + index, BUFFER_SIZE - index, 0);
 		if (len <= 0) return -1;
 
 		index += len;
-		len = index;
-		m_packet=CPacket((BYTE*)buffer, len);
+		len      = index;
+		m_packet = CPacket((BYTE*)buffer, len);
 		if (len > 0)
 		{
-			memmove(buffer, buffer + len, BUFFER_SIZE -len);
+			memmove(buffer, buffer + len, BUFFER_SIZE - len);
 			index -= len;
 			return m_packet.sCmd;
 		}
@@ -83,8 +85,16 @@ int CServerSocket::DealCommand()
 
 bool CServerSocket::Send(const char* pData, int nSize)
 {
+	if (m_client == -1) return false;
 	return send(m_client, pData, nSize, 0) > 0;
 }
+
+bool CServerSocket::Send(CPacket& pack)
+{
+	if (m_client == -1) return false;
+	return send(m_client, pack.Data(), pack.Size(), 0) > 0;
+}
+
 
 CServerSocket::CServerSocket(const CServerSocket& ss)
 {
@@ -143,19 +153,33 @@ CServerSocket::CHelper::~CHelper()
 
 CPacket::CPacket() : sHead(0), nLength(0), sCmd(0), sSum(0) {}
 
-CPacket::CPacket(const BYTE* pData, size_t& nSize)
+CPacket::CPacket(WORD nCmd, const BYTE* pData, size_t nSize) //封包
+{
+	sHead   = 0xFEFF;
+	nLength = nSize + 4;
+	sCmd    = nCmd;
+	strData.resize(nSize);
+	memcpy((void*)strData.c_str(), pData, nSize);
+	sSum = 0;
+	for (size_t j = 0; j < strData.size(); ++j)
+	{
+		sSum += BYTE(strData[j]) & 0xFF;
+	}
+}
+
+CPacket::CPacket(const BYTE* pData, size_t& nSize) //解包
 {
 	size_t i = 0;
-	for (; i < nSize ; ++i)
-	{ 
-		if (*(WORD*)(pData+i) == 0xFEFF)
+	for (; i < nSize; ++i)
+	{
+		if (*(WORD*)(pData + i) == 0xFEFF)
 		{
 			sHead = *(WORD*)(pData + i);
 			i += 2;
 			break;
 		}
 
-		if (i+8 > nSize)  //包数据可能不全，或包头未能全部接收
+		if (i + 8 > nSize) //包数据可能不全，或包头未能全部接收
 		{
 			nSize = 0;
 			return;
@@ -163,7 +187,7 @@ CPacket::CPacket(const BYTE* pData, size_t& nSize)
 
 		nLength = *(DWORD*)(pData + i);
 		i += 4;
-		if (nLength+i > nSize)  //包未完全接收到
+		if (nLength + i > nSize) //包未完全接收到
 		{
 			nSize = 0;
 			return;
@@ -173,7 +197,7 @@ CPacket::CPacket(const BYTE* pData, size_t& nSize)
 
 		if (nLength > 4)
 		{
-			strData.resize(nLength - 2 - 2);
+			strData.resize(nLength - 2 - 2);  //-命令2字节 - 和校验2字节
 			memcpy((void*)strData.c_str(), pData + i, nLength - 4);
 			i += nLength - 4;
 		}
@@ -181,9 +205,10 @@ CPacket::CPacket(const BYTE* pData, size_t& nSize)
 		sSum = *(WORD*)(pData + i);
 		i += 2;
 		WORD sum = 0;
-		for (size_t j = 0;j<strData.size();j++)
+		for (size_t j = 0; j < strData.size(); j++)
 		{
-			sum += BYTE(strData[i]) & 0xFF;
+			sum += BYTE(strData[j]) & 0xFF;
+			//sum = BYTE(strData[j]) & 0xFF + sum;
 		}
 
 		if (sum == sSum)
@@ -198,23 +223,44 @@ CPacket::CPacket(const BYTE* pData, size_t& nSize)
 
 CPacket::CPacket(const CPacket& pack)
 {
-	sHead = pack.sHead;
+	sHead   = pack.sHead;
 	nLength = pack.nLength;
-	sCmd = pack.sCmd;
+	sCmd    = pack.sCmd;
 	strData = pack.strData;
-	sSum = pack.sSum;
+	sSum    = pack.sSum;
 }
 
 CPacket& CPacket::operator=(const CPacket& pack)
 {
-	if (this != &pack) 
+	if (this != &pack)
 	{
-	sHead = pack.sHead;
-	nLength = pack.nLength;
-	sCmd = pack.sCmd;
-	strData = pack.strData;
-	sSum = pack.sSum;
+		sHead   = pack.sHead;
+		nLength = pack.nLength;
+		sCmd    = pack.sCmd;
+		strData = pack.strData;
+		sSum    = pack.sSum;
 	}
 	return *this;
 }
 
+int CPacket::Size() //获取包数据大小
+{
+	return nLength + 6;
+}
+
+const char* CPacket::Data()
+{
+	strOut.resize(nLength + 6);
+	BYTE* pData   = (BYTE*)strOut.c_str();
+	*(WORD*)pData = sHead;
+	pData += 2;
+	*(DWORD*)pData = nLength;
+	pData += 4;
+	*(WORD*)pData = sCmd;
+	pData += 2;
+	memcpy(pData, strData.c_str(), strData.size());
+	pData += strData.size();
+	*(WORD*)pData = sSum;
+
+	return strOut.c_str();
+}
