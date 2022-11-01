@@ -9,6 +9,7 @@
 #include <direct.h>
 #include <io.h>
 #include <list>
+#include <atlimage.h>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -28,6 +29,100 @@
 CWinApp theApp;
 
 using namespace std;
+
+typedef struct file_info
+{
+	file_info()
+	{
+		IsInvalid   = FALSE;
+		IsDirectory = -1;
+		HasNext     = TRUE;
+		memset(szFileName, 0, sizeof(szFileName));
+	}
+
+	BOOL IsInvalid;   //是否有效
+	BOOL IsDirectory; //是否为目录 0否，1是
+	BOOL HasNext;     //是否还有后续 0没有，1有
+	char szFileName[256];
+}        FILEINFO, *PFILEINFO;
+
+void Dump(BYTE* pData, size_t nSize); //输出磁盘信息
+int  MakeDriverInfo();                //获得磁盘信息
+int  MakeDirectoryInfo();             //获取指定文件夹下的信息
+int  RunFile();                       //运行文件
+int  DownloadFile();                  //下载文件
+int  MouseEvent();                    //鼠标事件
+int  SendScreen();                    //发送屏幕截图
+
+int main()
+{
+	int nRetCode = 0;
+
+	HMODULE hModule = ::GetModuleHandle(nullptr);
+
+
+	if (hModule != nullptr) {
+		// 初始化 MFC 并在失败时显示错误
+		if (!AfxWinInit(hModule, nullptr, ::GetCommandLine(), 0)) {
+			// TODO: 在此处为应用程序的行为编写代码。
+			wprintf(L"错误: MFC 初始化失败\n");
+			nRetCode = 1;
+		} else {
+			// TODO: socket，bind,listen,accept,read,write,close
+
+			/*CServerSocket* pserver =  CServerSocket::getInstance();
+			int count = 0;
+			if (pserver->InitSocket() == false)
+			{
+			    MessageBox(NULL, TEXT("网络初始化异常，未能成功初始化，请检查网络"), TEXT("网络初始化失败"), MB_OK | MB_ICONERROR);
+			    exit(0);
+			}
+			 while (CServerSocket::getInstance() != NULL)
+			 {
+				 
+			     if(pserver->AcceptClient()==false)
+			     {
+				     if (count >=3)
+				     {
+			             MessageBox(NULL, TEXT("多次无法正常接入用户，结束程序"), TEXT("接入用户失败"), MB_OK | MB_ICONERROR);
+			             exit(0);
+				     }
+			         MessageBox(NULL, TEXT("无法正常接入用户，自动重试"), TEXT("接入用户失败"), MB_OK | MB_ICONERROR);
+			         count++;
+			     }
+ 
+			     int ret = pserver->DealCommand();
+			     //TODO:
+			    
+			 }
+			  */
+			int nCmd = 6;
+			switch (nCmd) {
+			case 1: MakeDriverInfo(); //查看磁盘分区
+				break;
+			case 2: MakeDirectoryInfo(); //查看指定目录下的文件
+				break;
+			case 3: RunFile(); //打开文件
+				break;
+			case 4: DownloadFile(); //下载文件
+				break;
+			case 5: MouseEvent(); //鼠标操作
+				break;
+			case 6: SendScreen();
+			//发送屏幕内容 ==>发送屏幕截图
+			}
+
+
+		}
+	} else {
+		// TODO: 更改错误代码以符合需要
+		wprintf(L"错误: GetModuleHandle 失败\n");
+		nRetCode = 1;
+	}
+
+	return nRetCode;
+}
+
 
 void Dump(BYTE* pData, size_t nSize)
 {
@@ -62,24 +157,6 @@ int MakeDriverInfo() //从1开始的值，1->A,2->B,3->C
 	//CServerSocket::getInstance()->Send(pack);
 	return 0;
 }
-
-
-typedef struct file_info
-{
-	file_info()
-	{
-		IsInvalid   = FALSE;
-		IsDirectory = -1;
-		HasNext     = TRUE;
-		memset(szFileName, 0, sizeof(szFileName));
-	}
-
-	BOOL IsInvalid;   //是否有效
-	BOOL IsDirectory; //是否为目录 0否，1是
-	BOOL HasNext;     //是否还有后续 0没有，1有
-	char szFileName[256];
-}        FILEINFO, *PFILEINFO;
-
 
 int MakeDirectoryInfo() //获取指定文件夹下的信息
 {
@@ -137,7 +214,6 @@ int RunFile()
 	return 0;
 }
 
-
 int DownloadFile()
 {
 	string strPath;
@@ -182,16 +258,16 @@ int MouseEvent()
 		SetCursorPos(mouse.ptXY.x, mouse.ptXY.y);
 		DWORD nFlags = 0;
 		switch (mouse.nButton) {
-		case 0:  //左键
+		case 0: //左键
 			nFlags = 1;
 			break;
-		case 1:  //右键
+		case 1: //右键
 			nFlags = 2;
 			break;
-		case 2:  //中键
+		case 2: //中键
 			nFlags = 4;
 			break;
-		case 4:  //没有按键
+		case 4: //没有按键
 			nFlags = 8;
 			break;
 		}
@@ -200,16 +276,16 @@ int MouseEvent()
 			SetCursorPos(mouse.ptXY.x, mouse.ptXY.y);
 		}
 		switch (mouse.nAction) {
-		case 0:  //单击
+		case 0: //单击
 			nFlags |= 0x10;
 			break;
 		case 1: //双击
 			nFlags |= 0x20;
 			break;
-		case 2:  //按下
+		case 2: //按下
 			nFlags |= 0x40;
 			break;
-		case 3:  //放开
+		case 3: //放开
 			nFlags |= 0x80;
 			break;
 		default:
@@ -218,60 +294,60 @@ int MouseEvent()
 
 
 		switch (nFlags) {
-		case 0x11:  //左键单击
+		case 0x11: //左键单击
 			mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, GetMessageExtraInfo());
 			mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, GetMessageExtraInfo());
 			break;
-		case 0x21:  //左键双击
+		case 0x21: //左键双击
 			mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, GetMessageExtraInfo());
 			mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, GetMessageExtraInfo());
 			mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, GetMessageExtraInfo());
 			mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, GetMessageExtraInfo());
 			break;
-		case 0x41:  //左键按下
+		case 0x41: //左键按下
 			mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, GetMessageExtraInfo());
 			break;
-		case 0x81:  //左键放开
+		case 0x81: //左键放开
 			mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, GetMessageExtraInfo());
 			break;
 
-		case 0x12:  //右键单击
+		case 0x12: //右键单击
 			mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, GetMessageExtraInfo());
 			mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, GetMessageExtraInfo());
 			break;
-		case 0x22:  //右键双击
+		case 0x22: //右键双击
 			mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, GetMessageExtraInfo());
 			mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, GetMessageExtraInfo());
 			mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, GetMessageExtraInfo());
 			mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, GetMessageExtraInfo());
 			break;
-		case 0x42:  //右键按下
+		case 0x42: //右键按下
 			mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, GetMessageExtraInfo());
 			break;
-		case 0x82:  //右键放开
+		case 0x82: //右键放开
 			mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, GetMessageExtraInfo());
 			break;
 
-		case 0x14:  //中键单击
+		case 0x14: //中键单击
 			mouse_event(MOUSEEVENTF_MIDDLEDOWN, 0, 0, 0, GetMessageExtraInfo());
 			mouse_event(MOUSEEVENTF_MIDDLEUP, 0, 0, 0, GetMessageExtraInfo());
 			break;
-		case 0x24:  //中键双击
+		case 0x24: //中键双击
 			mouse_event(MOUSEEVENTF_MIDDLEDOWN, 0, 0, 0, GetMessageExtraInfo());
 			mouse_event(MOUSEEVENTF_MIDDLEUP, 0, 0, 0, GetMessageExtraInfo());
 			mouse_event(MOUSEEVENTF_MIDDLEDOWN, 0, 0, 0, GetMessageExtraInfo());
 			mouse_event(MOUSEEVENTF_MIDDLEUP, 0, 0, 0, GetMessageExtraInfo());
 			break;
-		case 0x44:  //中键按下
+		case 0x44: //中键按下
 			mouse_event(MOUSEEVENTF_MIDDLEDOWN, 0, 0, 0, GetMessageExtraInfo());
 			break;
-		case 0x84:  //中键放开
+		case 0x84: //中键放开
 			mouse_event(MOUSEEVENTF_MIDDLEUP, 0, 0, 0, GetMessageExtraInfo());
 			break;
 
 
-		case 0x08:  //鼠标移动
-			mouse_event(MOUSEEVENTF_MOVE,mouse.ptXY.x, mouse.ptXY.y, 0, GetMessageExtraInfo());
+		case 0x08: //鼠标移动
+			mouse_event(MOUSEEVENTF_MOVE, mouse.ptXY.x, mouse.ptXY.y, 0, GetMessageExtraInfo());
 			break;
 		}
 
@@ -287,69 +363,56 @@ int MouseEvent()
 	return 0;
 }
 
-int main()
+int SendScreen()
 {
-	int nRetCode = 0;
+	CImage screen;
+	HDC hScreen = ::GetDC(NULL);
+	int nBitPerPixel = GetDeviceCaps(hScreen, BITSPIXEL);
+	int nWidth = GetDeviceCaps(hScreen, HORZRES);
+	int nHeight = GetDeviceCaps(hScreen, VERTRES);
+	screen.Create(nWidth, nHeight, nBitPerPixel);
+	BitBlt(screen.GetDC(), 0, 0, nWidth, nHeight, hScreen, 0, 0, SRCCOPY);
+	ReleaseDC(NULL, hScreen);
+	HGLOBAL hMme = GlobalAlloc(GMEM_MOVEABLE, 0);
+	IStream* pStream = NULL;
+	HRESULT ret = CreateStreamOnHGlobal(hMme, TRUE, &pStream);
+	if (hMme == NULL) {
+		return -1;
+	}
+	if (ret == S_OK) {
+		screen.Save(pStream, Gdiplus::ImageFormatJPEG);
+		LARGE_INTEGER bg = { 0 };
+		pStream->Seek(bg, STREAM_SEEK_SET,NULL);
+		PBYTE pData = (PBYTE)GlobalLock(hMme);
+		SIZE_T nSize = GlobalSize(hMme);
+		CPacket pack(6, NULL, nSize);
+		CServerSocket::getInstance()->Send(pack);
+		GlobalUnlock(hMme);
+		
+	}
+	// screen.Save(TEXT("test2022.jpg"), Gdiplus::ImageFormatJPEG);
+	// screen.Save(TEXT("test2022.png"), Gdiplus::ImageFormatPNG);
+	/*int avg1 = 0, avg2 = 0;
+	int png=0, jpg=0;
+	for (int i = 0;i<100;i++) {
+		DWORD tick = GetTickCount64();
 
-	HMODULE hModule = ::GetModuleHandle(nullptr);
-
-
-	if (hModule != nullptr) {
-		// 初始化 MFC 并在失败时显示错误
-		if (!AfxWinInit(hModule, nullptr, ::GetCommandLine(), 0)) {
-			// TODO: 在此处为应用程序的行为编写代码。
-			wprintf(L"错误: MFC 初始化失败\n");
-			nRetCode = 1;
-		} else {
-			// TODO: socket，bind,listen,accept,read,write,close
-
-			/*CServerSocket* pserver =  CServerSocket::getInstance();
-			int count = 0;
-			if (pserver->InitSocket() == false)
-			{
-			    MessageBox(NULL, TEXT("网络初始化异常，未能成功初始化，请检查网络"), TEXT("网络初始化失败"), MB_OK | MB_ICONERROR);
-			    exit(0);
-			}
-			 while (CServerSocket::getInstance() != NULL)
-			 {
-				 
-			     if(pserver->AcceptClient()==false)
-			     {
-				     if (count >=3)
-				     {
-			             MessageBox(NULL, TEXT("多次无法正常接入用户，结束程序"), TEXT("接入用户失败"), MB_OK | MB_ICONERROR);
-			             exit(0);
-				     }
-			         MessageBox(NULL, TEXT("无法正常接入用户，自动重试"), TEXT("接入用户失败"), MB_OK | MB_ICONERROR);
-			         count++;
-			     }
- 
-			     int ret = pserver->DealCommand();
-			     //TODO:
-			    
-			 }
-			  */
-			int nCmd = 1;
-			switch (nCmd) {
-			case 1: MakeDriverInfo(); //查看磁盘分区
-				break;
-			case 2: MakeDirectoryInfo(); //查看指定目录下的文件
-				break;
-			case 3: RunFile(); //打开文件
-				break;
-			case 4: DownloadFile(); //下载文件
-				break;
-			case 5: MouseEvent();  //鼠标操作
-				break;
-			}
-
-
-		}
-	} else {
-		// TODO: 更改错误代码以符合需要
-		wprintf(L"错误: GetModuleHandle 失败\n");
-		nRetCode = 1;
+		screen.Save(TEXT("test2022.png"), Gdiplus::ImageFormatPNG);
+		png = GetTickCount64() - tick;
+		// TRACE("PNG %d\n", png);
+		
+		tick = GetTickCount64();
+		screen.Save(TEXT("test2022.jpg"), Gdiplus::ImageFormatJPEG);
+		jpg = GetTickCount64() - tick;
+		// TRACE("JPG %d\n", jpg);
+		avg1 += png;
+		avg2 += jpg;
 	}
 
-	return nRetCode;
+	TRACE("PNG %d\n", avg1 / 100);
+	TRACE("JPG %d\n", avg2 / 100);*/
+	pStream->Release();
+	GlobalFree(hMme);
+	screen.ReleaseDC();
+	return 0;
 }
