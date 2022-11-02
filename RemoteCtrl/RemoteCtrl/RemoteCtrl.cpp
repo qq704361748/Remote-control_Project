@@ -16,6 +16,10 @@
 #endif
 
 
+
+
+
+
 //#pragma warning(disable:4966)
 
 // #pragma comment ( linker, "/subsystem:windows /entry:WinMainCRTStartup" )
@@ -363,8 +367,34 @@ int MouseEvent()
 	return 0;
 }
 
+
 int SendScreen()
 {
+	//
+	// 获取多屏幕截图
+	//
+	/*DISPLAY_DEVICEA allscreen = new DISPLAY_DEVICEA;
+	CHAR   DeviceName1[32] = { 0 };
+	CHAR   DeviceName2[32] = { 0 };
+	allscreen = { 0 };
+	//llscreen = new DISPLAY_DEVICEA;
+	allscreen.cb = sizeof(DISPLAY_DEVICEA);
+	EnumDisplayDevicesA(NULL, 0, &allscreen, EDD_GET_DEVICE_INTERFACE_NAME);
+	memcpy(DeviceName1, allscreen.DeviceName, 32);
+	EnumDisplayDevicesA(NULL, 1, &allscreen, EDD_GET_DEVICE_INTERFACE_NAME);
+	memcpy(DeviceName2, allscreen.DeviceName, 32);
+
+	CImage screena;
+	HDC hScreena = CreateDCA(DeviceName2, DeviceName2, NULL, NULL);
+	int nBitPerPixela = GetDeviceCaps(hScreena, BITSPIXEL);
+	int nWidtha = GetDeviceCaps(hScreena, HORZRES);
+	int nHeighta = GetDeviceCaps(hScreena, VERTRES);
+	screena.Create(nWidtha, nHeighta, nBitPerPixela);
+	BitBlt(screena.GetDC(), 0, 0, nWidtha, nHeighta, hScreena, 0, 0, SRCCOPY);
+	ReleaseDC(NULL, hScreena);
+	screena.Save(TEXT("abc2022.png"), Gdiplus::ImageFormatPNG);
+	screena.ReleaseDC();*/
+
 	CImage screen;
 	HDC hScreen = ::GetDC(NULL);
 	int nBitPerPixel = GetDeviceCaps(hScreen, BITSPIXEL);
@@ -374,11 +404,12 @@ int SendScreen()
 	BitBlt(screen.GetDC(), 0, 0, nWidth, nHeight, hScreen, 0, 0, SRCCOPY);
 	ReleaseDC(NULL, hScreen);
 	HGLOBAL hMme = GlobalAlloc(GMEM_MOVEABLE, 0);
-	IStream* pStream = NULL;
-	HRESULT ret = CreateStreamOnHGlobal(hMme, TRUE, &pStream);
 	if (hMme == NULL) {
 		return -1;
 	}
+	IStream* pStream = NULL;
+	HRESULT ret = CreateStreamOnHGlobal(hMme, TRUE, &pStream);
+	
 	if (ret == S_OK) {
 		screen.Save(pStream, Gdiplus::ImageFormatJPEG);
 		LARGE_INTEGER bg = { 0 };
@@ -388,8 +419,8 @@ int SendScreen()
 		CPacket pack(6, NULL, nSize);
 		CServerSocket::getInstance()->Send(pack);
 		GlobalUnlock(hMme);
-		
 	}
+
 	// screen.Save(TEXT("test2022.jpg"), Gdiplus::ImageFormatJPEG);
 	// screen.Save(TEXT("test2022.png"), Gdiplus::ImageFormatPNG);
 	/*int avg1 = 0, avg2 = 0;
@@ -411,6 +442,7 @@ int SendScreen()
 
 	TRACE("PNG %d\n", avg1 / 100);
 	TRACE("JPG %d\n", avg2 / 100);*/
+
 	pStream->Release();
 	GlobalFree(hMme);
 	screen.ReleaseDC();
