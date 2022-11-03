@@ -48,7 +48,8 @@ public:
 	bool                  Send(CPacket& pack);                //发送数据
 	bool                  GetFilePath(std::string& strPath);  //获取文件路径
 	bool                  GetMouseEvent(MOUSEEVENT& mouse);
-
+	CPacket&              GetPacket();   //获取命令参数
+	void                  CloseClient(); //断开连接
 private:
 	SOCKET  m_sock;   //服务端用于监听的socket
 	SOCKET  m_client; //用于服务端收发消息的socket

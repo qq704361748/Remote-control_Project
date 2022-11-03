@@ -1,5 +1,4 @@
-﻿
-// RemoteClientDlg.cpp: 实现文件
+﻿// RemoteClientDlg.cpp: 实现文件
 //
 
 #include "pch.h"
@@ -20,22 +19,20 @@ class CAboutDlg : public CDialogEx
 public:
 	CAboutDlg();
 
-// 对话框数据
+	// 对话框数据
 #ifdef AFX_DESIGN_TIME
 	enum { IDD = IDD_ABOUTBOX };
 #endif
 
-	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV 支持
+protected:
+	virtual void DoDataExchange(CDataExchange* pDX); // DDX/DDV 支持
 
-// 实现
+	// 实现
 protected:
 	DECLARE_MESSAGE_MAP()
 };
 
-CAboutDlg::CAboutDlg() : CDialogEx(IDD_ABOUTBOX)
-{
-}
+CAboutDlg::CAboutDlg() : CDialogEx(IDD_ABOUTBOX) {}
 
 void CAboutDlg::DoDataExchange(CDataExchange* pDX)
 {
@@ -47,7 +44,6 @@ END_MESSAGE_MAP()
 
 
 // CRemoteClientDlg 对话框
-
 
 
 CRemoteClientDlg::CRemoteClientDlg(CWnd* pParent /*=nullptr*/)
@@ -65,6 +61,7 @@ BEGIN_MESSAGE_MAP(CRemoteClientDlg, CDialogEx)
 	ON_WM_SYSCOMMAND()
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
+	ON_BN_CLICKED(IDC_BTN_TEST, &CRemoteClientDlg::OnBnClickedBtnTest)
 END_MESSAGE_MAP()
 
 
@@ -81,14 +78,12 @@ BOOL CRemoteClientDlg::OnInitDialog()
 	ASSERT(IDM_ABOUTBOX < 0xF000);
 
 	CMenu* pSysMenu = GetSystemMenu(FALSE);
-	if (pSysMenu != nullptr)
-	{
-		BOOL bNameValid;
+	if (pSysMenu != nullptr) {
+		BOOL    bNameValid;
 		CString strAboutMenu;
 		bNameValid = strAboutMenu.LoadString(IDS_ABOUTBOX);
 		ASSERT(bNameValid);
-		if (!strAboutMenu.IsEmpty())
-		{
+		if (!strAboutMenu.IsEmpty()) {
 			pSysMenu->AppendMenu(MF_SEPARATOR);
 			pSysMenu->AppendMenu(MF_STRING, IDM_ABOUTBOX, strAboutMenu);
 		}
@@ -96,23 +91,20 @@ BOOL CRemoteClientDlg::OnInitDialog()
 
 	// 设置此对话框的图标。  当应用程序主窗口不是对话框时，框架将自动
 	//  执行此操作
-	SetIcon(m_hIcon, TRUE);			// 设置大图标
-	SetIcon(m_hIcon, FALSE);		// 设置小图标
+	SetIcon(m_hIcon, TRUE);  // 设置大图标
+	SetIcon(m_hIcon, FALSE); // 设置小图标
 
 	// TODO: 在此添加额外的初始化代码
 
-	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
+	return TRUE; // 除非将焦点设置到控件，否则返回 TRUE
 }
 
 void CRemoteClientDlg::OnSysCommand(UINT nID, LPARAM lParam)
 {
-	if ((nID & 0xFFF0) == IDM_ABOUTBOX)
-	{
+	if ((nID & 0xFFF0) == IDM_ABOUTBOX) {
 		CAboutDlg dlgAbout;
 		dlgAbout.DoModal();
-	}
-	else
-	{
+	} else {
 		CDialogEx::OnSysCommand(nID, lParam);
 	}
 }
@@ -123,15 +115,14 @@ void CRemoteClientDlg::OnSysCommand(UINT nID, LPARAM lParam)
 
 void CRemoteClientDlg::OnPaint()
 {
-	if (IsIconic())
-	{
+	if (IsIconic()) {
 		CPaintDC dc(this); // 用于绘制的设备上下文
 
 		SendMessage(WM_ICONERASEBKGND, reinterpret_cast<WPARAM>(dc.GetSafeHdc()), 0);
 
 		// 使图标在工作区矩形中居中
-		int cxIcon = GetSystemMetrics(SM_CXICON);
-		int cyIcon = GetSystemMetrics(SM_CYICON);
+		int   cxIcon = GetSystemMetrics(SM_CXICON);
+		int   cyIcon = GetSystemMetrics(SM_CYICON);
 		CRect rect;
 		GetClientRect(&rect);
 		int x = (rect.Width() - cxIcon + 1) / 2;
@@ -139,9 +130,7 @@ void CRemoteClientDlg::OnPaint()
 
 		// 绘制图标
 		dc.DrawIcon(x, y, m_hIcon);
-	}
-	else
-	{
+	} else {
 		CDialogEx::OnPaint();
 	}
 }
@@ -153,3 +142,20 @@ HCURSOR CRemoteClientDlg::OnQueryDragIcon()
 	return static_cast<HCURSOR>(m_hIcon);
 }
 
+
+void CRemoteClientDlg::OnBnClickedBtnTest()
+{
+	// 测试
+	CClientSocket* pClient = CClientSocket::getInstance();
+	bool           ret     = pClient->InitSocket("127.0.0.1"); //TODO: 返回值处理
+	if (!ret) {
+		AfxMessageBox(TEXT("网络初始化失败！"));
+		return;
+	}
+	CPacket pack(1981,NULL, 0);
+	pClient->Send(pack);
+	TRACE("Send ret %d\r\n ", ret);
+	int cmd = pClient->DealCommand();
+	TRACE("ACK:%d\r\n", cmd);
+	pClient->CloseSocket();
+}
