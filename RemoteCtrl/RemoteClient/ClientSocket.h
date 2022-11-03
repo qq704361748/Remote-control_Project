@@ -49,7 +49,7 @@ class CClientSocket //服务端Socket类 （用于初始化和结束时销毁  �
 {
 public:
 	static CClientSocket* getInstance();                          //得到一个CClientSocket单例
-	bool                  InitSocket(const string& strIPAddress); //配置Socket（绑定、监听）
+	bool                  InitSocket(int nIP, int nPort); //配置Socket（绑定、监听）
 	int                   DealCommand();                          //处理接收到的消息
 	bool                  Send(const char* pData, int nSize);     //发送消息
 	bool                  Send(CPacket& pack);                    //发送数据
