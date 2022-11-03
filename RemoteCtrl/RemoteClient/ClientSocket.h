@@ -2,12 +2,14 @@
 #include "pch.h"
 
 #include <string>
+#include <vector>
 
 #include "framework.h"
 
 #pragma pack(push)
 #pragma pack(1)
 using namespace std;
+
 class CPacket
 {
 public:
@@ -38,23 +40,27 @@ typedef struct MouseEvent
 	WORD  nAction; //点击、移动、双击
 	WORD  nButton; //左键、右键、中键
 	POINT ptXY;    //坐标
-}         MOUSEEVENT, * PMOUSEEVENT;
+}         MOUSEEVENT, *PMOUSEEVENT;
 
+
+string GetErrorInfo(int wsaErrCode);
 
 class CClientSocket //服务端Socket类 （用于初始化和结束时销毁  单例）
 {
 public:
-	static CClientSocket* getInstance();                      //得到一个CClientSocket单例
-	bool                  InitSocket(const string& strIPAddress);                       //配置Socket（绑定、监听）
-	int                   DealCommand();                      //处理接收到的消息
-	bool                  Send(const char* pData, int nSize); //发送消息
-	bool                  Send(CPacket& pack);                //发送数据
-	bool                  GetFilePath(std::string& strPath);  //获取文件路径
+	static CClientSocket* getInstance();                          //得到一个CClientSocket单例
+	bool                  InitSocket(const string& strIPAddress); //配置Socket（绑定、监听）
+	int                   DealCommand();                          //处理接收到的消息
+	bool                  Send(const char* pData, int nSize);     //发送消息
+	bool                  Send(CPacket& pack);                    //发送数据
+	bool                  GetFilePath(std::string& strPath);      //获取文件路径
 	bool                  GetMouseEvent(MOUSEEVENT& mouse);
-
+	CPacket&              GetPacket();
+	void                  CloseSocket();
 private:
-	SOCKET  m_sock;   //服务端用于监听的socket
-	CPacket m_packet;
+	vector<char> m_buffer;
+	SOCKET       m_sock;
+	CPacket      m_packet;
 
 	CClientSocket& operator=(const CClientSocket& ss) = delete; //禁用赋值构造 实现单例
 	CClientSocket(const CClientSocket& ss);                     //拷贝构造 实现单例

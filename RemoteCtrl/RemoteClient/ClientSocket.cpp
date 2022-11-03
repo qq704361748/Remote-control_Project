@@ -16,26 +16,25 @@ string GetErrorInfo(int wsaErrCode)
 	string ret;
 	LPVOID lpMsgBuf = NULL;
 	FormatMessage(
-		FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER,
-		NULL,
-		wsaErrCode,
-		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-		(LPTSTR)&lpMsgBuf,
-		0, NULL
-	);
+	              FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER,
+	              NULL,
+	              wsaErrCode,
+	              MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+	              (LPTSTR)&lpMsgBuf,
+	              0, NULL
+	             );
 	ret = (char*)lpMsgBuf;
 	LocalFree(lpMsgBuf);
 	return ret;
 }
 
 
-
 MouseEvent::MouseEvent()
 {
 	nAction = 0;
 	nButton = -1;
-	ptXY.x = 0;
-	ptXY.y = 0;
+	ptXY.x  = 0;
+	ptXY.y  = 0;
 }
 
 CClientSocket* CClientSocket::getInstance()
@@ -48,14 +47,18 @@ CClientSocket* CClientSocket::getInstance()
 
 bool CClientSocket::InitSocket(const string& strIPAddress)
 {
+	if (m_sock != INVALID_SOCKET) {
+		CloseSocket();
+	}
+	m_sock = socket(PF_INET, SOCK_STREAM, 0);
 	if (m_sock == -1) {
 		return false;
 	}
 	SOCKADDR_IN serv_adr;
 	memset(&serv_adr, 0, sizeof(serv_adr));
-	serv_adr.sin_family = AF_INET;
+	serv_adr.sin_family           = AF_INET;
 	serv_adr.sin_addr.S_un.S_addr = inet_addr(strIPAddress.c_str());
-	serv_adr.sin_port = htons(9527);
+	serv_adr.sin_port             = htons(9527);
 
 	if (serv_adr.sin_addr.S_un.S_addr == INADDR_NONE) {
 		AfxMessageBox(TEXT("指定的IP地址不存在！"));
@@ -63,7 +66,7 @@ bool CClientSocket::InitSocket(const string& strIPAddress)
 	}
 
 	//连接
-	int ret = connect(m_sock, (sockaddr*)&serv_adr, sizeof(serv_adr));
+	int ret = connect(m_sock, (sockaddr*)&serv_adr, sizeof(SOCKADDR_IN));
 	if (ret == -1) {
 		AfxMessageBox(TEXT("连接失败"));
 		TRACE("连接失败：%d %s\r\n", WSAGetLastError(), GetErrorInfo(WSAGetLastError()).c_str());
@@ -80,7 +83,7 @@ int CClientSocket::DealCommand()
 {
 	if (m_sock == -1) return -1;
 	//char buffer[1024] = { 0 };
-	char* buffer = new char[BUFFER_SIZE];
+	char* buffer = m_buffer.data();
 	memset(buffer, 0, BUFFER_SIZE);
 	size_t index = 0;
 	while (true) {
@@ -88,7 +91,7 @@ int CClientSocket::DealCommand()
 		if (len <= 0) return -1;
 
 		index += len;
-		len = index;
+		len      = index;
 		m_packet = CPacket((BYTE*)buffer, len);
 		if (len > 0) {
 			memmove(buffer, buffer + len, BUFFER_SIZE - len);
@@ -107,13 +110,14 @@ bool CClientSocket::Send(const char* pData, int nSize)
 
 bool CClientSocket::Send(CPacket& pack)
 {
+	TRACE("m_sock = %d\r\n", m_sock);
 	if (m_sock == -1) return false;
 	return send(m_sock, pack.Data(), pack.Size(), 0) > 0;
 }
 
 bool CClientSocket::GetFilePath(std::string& strPath)
 {
-	if ((m_packet.sCmd >= 2) && (m_packet.sCmd <= 4))  //当命令为2时，即为获取文件目录
+	if ((m_packet.sCmd >= 2) && (m_packet.sCmd <= 4)) //当命令为2时，即为获取文件目录
 	{
 		strPath = m_packet.strData;
 		return true;
@@ -131,6 +135,17 @@ bool CClientSocket::GetMouseEvent(MOUSEEVENT& mouse)
 	return false;
 }
 
+CPacket& CClientSocket::GetPacket()
+{
+	return m_packet;
+}
+
+void CClientSocket::CloseSocket()
+{
+	closesocket(m_sock);
+	m_sock = INVALID_SOCKET;
+}
+
 
 CClientSocket::CClientSocket(const CClientSocket& ss)
 {
@@ -139,13 +154,13 @@ CClientSocket::CClientSocket(const CClientSocket& ss)
 
 CClientSocket::CClientSocket()
 {
-	m_sock = INVALID_SOCKET;
+	//m_sock = INVALID_SOCKET;
 	if (InitSockEnv() == FALSE) {
 
 		MessageBox(NULL, TEXT("无法初始化套接字环境,请检查网络设置"), TEXT("初始化错误"), MB_OK | MB_ICONERROR);
 		exit(0);
 	}
-	m_sock = socket(PF_INET, SOCK_STREAM, 0);
+	m_buffer.resize(BUFFER_SIZE);
 }
 
 CClientSocket::~CClientSocket()
@@ -168,7 +183,7 @@ void CClientSocket::releaseInstance()
 {
 	if (m_instance != NULL) {
 		CClientSocket* tmp = m_instance;
-		m_instance = NULL;
+		m_instance         = NULL;
 		delete tmp;
 	}
 }
@@ -187,14 +202,13 @@ CPacket::CPacket() : sHead(0), nLength(0), sCmd(0), sSum(0) {}
 
 CPacket::CPacket(WORD nCmd, const BYTE* pData, size_t nSize) //封包
 {
-	sHead = 0xFEFF;
+	sHead   = 0xFEFF;
 	nLength = nSize + 4;
-	sCmd = nCmd;
+	sCmd    = nCmd;
 	if (nSize > 0) {
 		strData.resize(nSize);
 		memcpy((void*)strData.c_str(), pData, nSize);
-	}
-	else {
+	} else {
 		strData.clear();
 	}
 
@@ -213,17 +227,18 @@ CPacket::CPacket(const BYTE* pData, size_t& nSize) //解包
 			i += 2;
 			break;
 		}
-
-		if (i + 8 > nSize) //包数据可能不全，或包头未能全部接收
-		{
+	}
+		if (i + 8 > nSize) {
+			//包数据可能不全，或包头未能全部接收
 			nSize = 0;
 			return;
 		}
 
 		nLength = *(DWORD*)(pData + i);
 		i += 4;
-		if (nLength + i > nSize) //包未完全接收到
-		{
+		if (nLength + i > nSize) {
+			//包未完全接收到
+
 			nSize = 0;
 			return;
 		}
@@ -231,7 +246,7 @@ CPacket::CPacket(const BYTE* pData, size_t& nSize) //解包
 		i += 2;
 
 		if (nLength > 4) {
-			strData.resize(nLength - 2 - 2);  //-命令2字节 - 和校验2字节
+			strData.resize(nLength - 2 - 2); //-命令2字节 - 和校验2字节
 			memcpy((void*)strData.c_str(), pData + i, nLength - 4);
 			i += nLength - 4;
 		}
@@ -249,27 +264,27 @@ CPacket::CPacket(const BYTE* pData, size_t& nSize) //解包
 			return;
 		}
 		nSize = 0;
-	}
+	
 }
 
 
 CPacket::CPacket(const CPacket& pack)
 {
-	sHead = pack.sHead;
+	sHead   = pack.sHead;
 	nLength = pack.nLength;
-	sCmd = pack.sCmd;
+	sCmd    = pack.sCmd;
 	strData = pack.strData;
-	sSum = pack.sSum;
+	sSum    = pack.sSum;
 }
 
 CPacket& CPacket::operator=(const CPacket& pack)
 {
 	if (this != &pack) {
-		sHead = pack.sHead;
+		sHead   = pack.sHead;
 		nLength = pack.nLength;
-		sCmd = pack.sCmd;
+		sCmd    = pack.sCmd;
 		strData = pack.strData;
-		sSum = pack.sSum;
+		sSum    = pack.sSum;
 	}
 	return *this;
 }
@@ -282,7 +297,7 @@ int CPacket::Size() //获取包数据大小
 const char* CPacket::Data()
 {
 	strOut.resize(nLength + 6);
-	BYTE* pData = (BYTE*)strOut.c_str();
+	BYTE* pData   = (BYTE*)strOut.c_str();
 	*(WORD*)pData = sHead;
 	pData += 2;
 	*(DWORD*)pData = nLength;

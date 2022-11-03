@@ -32,7 +32,7 @@ CWinApp theApp;
 using namespace std;
 
 CLockDialog dlg;
-unsigned threadid = 0;
+unsigned    threadid = 0;
 
 typedef struct file_info
 {
@@ -50,6 +50,9 @@ typedef struct file_info
 	char szFileName[256];
 }        FILEINFO, *PFILEINFO;
 
+
+int ExcuteCommoand(int nCmd);  
+
 void Dump(BYTE* pData, size_t nSize); //输出磁盘信息
 int  MakeDriverInfo();                //获得磁盘信息
 int  MakeDirectoryInfo();             //获取指定文件夹下的信息
@@ -61,6 +64,8 @@ int  LockMachine();                   //锁机
 int  UnlockMachine();                 //解锁
 
 unsigned __stdcall threadLockDlg(void* arg); //子线程执行锁机
+
+
 
 
 int main()
@@ -79,52 +84,34 @@ int main()
 		} else {
 			// TODO: socket，bind,listen,accept,read,write,close
 
-			/*CServerSocket* pserver =  CServerSocket::getInstance();
-			int count = 0;
-			if (pserver->InitSocket() == false)
-			{
-			    MessageBox(NULL, TEXT("网络初始化异常，未能成功初始化，请检查网络"), TEXT("网络初始化失败"), MB_OK | MB_ICONERROR);
-			    exit(0);
+			CServerSocket* pserver = CServerSocket::getInstance();
+			int            count   = 0;
+			if (pserver->InitSocket() == false) {
+				MessageBox(NULL, TEXT("网络初始化异常，未能成功初始化，请检查网络"), TEXT("网络初始化失败"), MB_OK | MB_ICONERROR);
+				exit(0);
 			}
-			 while (CServerSocket::getInstance() != NULL)
-			 {
-				 
-			     if(pserver->AcceptClient()==false)
-			     {
-				     if (count >=3)
-				     {
-			             MessageBox(NULL, TEXT("多次无法正常接入用户，结束程序"), TEXT("接入用户失败"), MB_OK | MB_ICONERROR);
-			             exit(0);
-				     }
-			         MessageBox(NULL, TEXT("无法正常接入用户，自动重试"), TEXT("接入用户失败"), MB_OK | MB_ICONERROR);
-			         count++;
-			     }
- 
-			     int ret = pserver->DealCommand();
-			     //TODO:
-			    
-			 }
-			  */
+			while (CServerSocket::getInstance() != NULL) {
 
-			int nCmd = 7;
-			switch (nCmd) {
-			case 1: MakeDriverInfo(); //查看磁盘分区
-				break;
-			case 2: MakeDirectoryInfo(); //查看指定目录下的文件
-				break;
-			case 3: RunFile(); //打开文件
-				break;
-			case 4: DownloadFile(); //下载文件
-				break;
-			case 5: MouseEvent(); //鼠标操作
-				break;
-			case 6: SendScreen(); //发送屏幕内容 ==>发送屏幕截图
-				break;
-			case 7: LockMachine(); //锁机
-				break;
-			case 8: UnlockMachine(); //解锁
-				break;
+				if (pserver->AcceptClient() == false) {
+					if (count >= 3) {
+						MessageBox(NULL, TEXT("多次无法正常接入用户，结束程序"), TEXT("接入用户失败"), MB_OK | MB_ICONERROR);
+						exit(0);
+					}
+					MessageBox(NULL, TEXT("无法正常接入用户，自动重试"), TEXT("接入用户失败"), MB_OK | MB_ICONERROR);
+					count++;
+				}
+				TRACE("AcceptClient return true\r\n");
 
+				int ret = pserver->DealCommand();
+				TRACE("DealCommand ret %d\r\n", ret);
+				if (ret > 0) {
+					ret = ExcuteCommoand(ret);
+					if (ret != 0) {
+						TRACE("执行命令失败：%d ret = %d\r\n", pserver->GetPacket().sCmd, ret);
+					}
+					pserver->CloseClient();
+					TRACE("Command has done!\r\n");
+				}
 			}
 
 
@@ -523,10 +510,45 @@ unsigned __stdcall threadLockDlg(void* arg)
 			}
 		}
 	}
-	
+
 	::ShowWindow(::FindWindow(TEXT("Shell_TrayWnd"), NULL), SW_SHOW); //显示任务栏
 	ShowCursor(true);
-	dlg.DestroyWindow();//显示鼠标
+	dlg.DestroyWindow(); //显示鼠标
 	_endthreadex(0);
 	return 0;
+}
+
+int TestConnect()
+{
+	CPacket pack(1981, NULL, 0);
+
+	bool ret = CServerSocket::getInstance()->Send(pack);
+	TRACE("Send ret = %d\r\n", ret);
+	return 0;
+}
+
+int ExcuteCommoand(int nCmd)
+{
+	//int nCmd = 7;
+	int ret = 0;
+	switch (nCmd) {
+	case 1: ret = MakeDriverInfo(); //查看磁盘分区
+		break;
+	case 2: ret = MakeDirectoryInfo(); //查看指定目录下的文件
+		break;
+	case 3: ret = RunFile(); //打开文件
+		break;
+	case 4: ret = DownloadFile(); //下载文件
+		break;
+	case 5: ret = MouseEvent(); //鼠标操作
+		break;
+	case 6: ret = SendScreen(); //发送屏幕内容 ==>发送屏幕截图
+		break;
+	case 7: ret = LockMachine(); //锁机
+		break;
+	case 8: ret = UnlockMachine(); //解锁
+		break;
+	case 1981: ret = TestConnect();  //连接测试
+	}
+	return ret;
 }

@@ -52,10 +52,12 @@ bool CServerSocket::InitSocket()
 
 bool CServerSocket::AcceptClient()
 {
+	TRACE("enter AcceptClient \r\t");
 	SOCKADDR_IN client_adr;
 
 	int cli_sz = sizeof(client_adr);
 	m_client   = accept(m_sock, (sockaddr*)&client_adr, &cli_sz);
+	TRACE("m_client = %d\r\n", m_client);
 	if (m_client == -1) return false;
 	return true;
 }
@@ -67,11 +69,20 @@ int CServerSocket::DealCommand()
 	if (m_client == -1) return -1;
 	//char buffer[1024] = { 0 };
 	char* buffer = new char[BUFFER_SIZE];
+	if (buffer == NULL) {
+		TRACE("内存不足！\r\n");
+		return -2;
+	}
 	memset(buffer, 0, BUFFER_SIZE);
 	size_t index = 0;
 	while (true) {
 		size_t len = recv(m_client, buffer + index, BUFFER_SIZE - index, 0);
-		if (len <= 0) return -1;
+		if (len <= 0) {
+			delete[] buffer;
+			return -1;
+		}
+		//TEST
+		TRACE("recv %d\r\n", len);
 
 		index += len;
 		len      = index;
@@ -79,9 +90,11 @@ int CServerSocket::DealCommand()
 		if (len > 0) {
 			memmove(buffer, buffer + len, BUFFER_SIZE - len);
 			index -= len;
+			delete[] buffer;
 			return m_packet.sCmd;
 		}
 	}
+	delete[] buffer;
 	return -1;
 }
 
@@ -115,6 +128,17 @@ bool CServerSocket::GetMouseEvent(MOUSEEVENT& mouse)
 		return true;
 	}
 	return false;
+}
+
+CPacket& CServerSocket::GetPacket()
+{
+	return m_packet;
+}
+
+void CServerSocket::CloseClient()
+{
+	closesocket(m_client);
+	m_client = INVALID_SOCKET;
 }
 
 
@@ -200,7 +224,7 @@ CPacket::CPacket(const BYTE* pData, size_t& nSize) //解包
 			i += 2;
 			break;
 		}
-
+	}
 		if (i + 8 > nSize) //包数据可能不全，或包头未能全部接收
 		{
 			nSize = 0;
@@ -236,7 +260,7 @@ CPacket::CPacket(const BYTE* pData, size_t& nSize) //解包
 			return;
 		}
 		nSize = 0;
-	}
+	
 }
 
 
