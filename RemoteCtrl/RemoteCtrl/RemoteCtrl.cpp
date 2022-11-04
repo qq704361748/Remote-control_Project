@@ -24,7 +24,6 @@
 // #pragma comment ( linker,"/subsystem:console /entry:WinMainCRTStartup" )
 // #pragma comment ( linker,"/subsystem:console /entry:mainCRTStartup" )
 
-
 // 唯一的应用程序对象
 
 CWinApp theApp;
@@ -34,21 +33,7 @@ using namespace std;
 CLockDialog dlg;
 unsigned    threadid = 0;
 
-typedef struct file_info
-{
-	file_info()
-	{
-		IsInvalid   = FALSE;
-		IsDirectory = -1;
-		HasNext     = TRUE;
-		memset(szFileName, 0, sizeof(szFileName));
-	}
 
-	BOOL IsInvalid;   //是否有效
-	BOOL IsDirectory; //是否为目录 0否，1是
-	BOOL HasNext;     //是否还有后续 0没有，1有
-	char szFileName[256];
-}        FILEINFO, *PFILEINFO;
 
 
 int ExcuteCommoand(int nCmd);  
@@ -153,7 +138,6 @@ int MakeDriverInfo() //从1开始的值，1->A,2->B,3->C
 			result += 'A' + i - 1;
 		}
 	}
-	result += ',';
 	CPacket pack(1, (BYTE*)result.c_str(), result.size());
 	Dump((BYTE*)pack.Data(), pack.Size());
 	CServerSocket::getInstance()->Send(pack);
@@ -163,6 +147,8 @@ int MakeDriverInfo() //从1开始的值，1->A,2->B,3->C
 int MakeDirectoryInfo() //获取指定文件夹下的信息
 {
 	string strPath;
+
+	
 	//list<FILEINFO> listFileInfos;
 
 	if (CServerSocket::getInstance()->GetFilePath(strPath) == false) {
@@ -170,13 +156,18 @@ int MakeDirectoryInfo() //获取指定文件夹下的信息
 		return -1;
 	}
 
+	// if (_chdir(strPath.c_str()) != 0)
+	// if (_wchdir(TEXT("E:\\")) != 0)
+	//strPath += ":\\";
+	// strPath.append(":\\");
 	if (_chdir(strPath.c_str()) != 0) {
 		FILEINFO finfo;
-		finfo.IsInvalid   = TRUE;
-		finfo.IsDirectory = TRUE;
-		finfo.HasNext     = FALSE;
-		memcpy(finfo.szFileName, strPath.c_str(), strPath.size());
+		
 		//listFileInfos.push_back(finfo);
+		finfo.HasNext = FALSE;
+		memcpy(finfo.szFileName, strPath.c_str(), strlen(strPath.c_str()));
+
+
 		CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));
 		CServerSocket::getInstance()->Send(pack);
 		OutputDebugString(TEXT("该目录无法访问！"));
@@ -187,6 +178,10 @@ int MakeDirectoryInfo() //获取指定文件夹下的信息
 	int         hfind = 0;
 	if ((hfind = _findfirst("*", &fdata)) == -1) {
 		OutputDebugString(TEXT("当前目录没有文件！"));
+		FILEINFO finfo;
+		finfo.HasNext = FALSE;
+		CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));
+		CServerSocket::getInstance()->Send(pack);
 		return -3;
 	}
 
@@ -194,6 +189,7 @@ int MakeDirectoryInfo() //获取指定文件夹下的信息
 		FILEINFO finfo;
 		finfo.IsDirectory = (fdata.attrib & _A_SUBDIR) != 0;
 		memcpy(finfo.szFileName, fdata.name, strlen(fdata.name));
+		TRACE("%s\r\n", finfo.szFileName);
 		//listFileInfos.push_back(finfo);
 		CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));
 		CServerSocket::getInstance()->Send(pack);
