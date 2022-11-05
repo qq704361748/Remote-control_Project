@@ -217,7 +217,8 @@ int DownloadFile()
 	string strPath;
 	CServerSocket::getInstance()->GetFilePath(strPath);
 	long long data  = 0;
-	FILE*     pFile = fopen(strPath.c_str(), "rb");
+	FILE* pFile;
+	fopen_s(&pFile,strPath.c_str(), "rb");
 	if (pFile == NULL) {
 		CPacket pack(4, (BYTE*)&data, 8);
 		CServerSocket::getInstance()->Send(pack);
@@ -231,9 +232,10 @@ int DownloadFile()
 
 		data = _ftelli64(pFile);
 		CPacket head(4, (BYTE*)&data, 8);
+		CServerSocket::getInstance()->Send(head);
 		fseek(pFile, 0, SEEK_SET);
 
-		char   buffer[1024] = "";
+		char   buffer[1024] = {0};
 		size_t rlen         = 0;
 		do {
 			rlen = fread(buffer, 1, 1024, pFile);

@@ -70,7 +70,6 @@ private:
 	SOCKET  m_sock;   //服务端用于监听的socket
 	SOCKET  m_client; //用于服务端收发消息的socket
 	CPacket m_packet;
-
 	CServerSocket& operator=(const CServerSocket& ss) = delete; //禁用赋值构造 实现单例
 	CServerSocket(const CServerSocket& ss);                     //拷贝构造 实现单例
 

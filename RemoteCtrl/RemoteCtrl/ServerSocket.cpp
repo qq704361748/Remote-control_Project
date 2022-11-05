@@ -67,14 +67,10 @@ bool CServerSocket::AcceptClient()
 int CServerSocket::DealCommand()
 {
 	if (m_client == -1) return -1;
-	//char buffer[1024] = { 0 };
 	char* buffer = new char[BUFFER_SIZE];
-	if (buffer == NULL) {
-		TRACE("内存不足！\r\n");
-		return -2;
-	}
 	memset(buffer, 0, BUFFER_SIZE);
 	size_t index = 0;
+
 	while (true) {
 		size_t len = recv(m_client, buffer + index, BUFFER_SIZE - index, 0);
 		if (len <= 0) {

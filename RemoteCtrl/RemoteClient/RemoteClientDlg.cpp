@@ -78,11 +78,11 @@ void CRemoteClientDlg::LoadFileInfo()
 	DeleteTreeChildrenItem(hTreeSelectded);
 	m_List.DeleteAllItems();
 
-	CString        strPath = GetPath(hTreeSelectded);
+	CString strPath = GetPath(hTreeSelectded);
 	USES_CONVERSION;
-	string str(W2A(strPath));
-	int            ncmd = SendCommandPacket(2, false, (BYTE*)str.c_str(), str.length());
-	PFILEINFO      pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();
+	string         str(W2A(strPath));
+	int            ncmd    = SendCommandPacket(2, false, (BYTE*)str.c_str(), str.length());
+	PFILEINFO      pInfo   = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();
 	CClientSocket* pClient = CClientSocket::getInstance();
 	while (pInfo->HasNext) {
 		TRACE("Name [%s] isdir %d\r\n", pInfo->szFileName, pInfo->IsDirectory);
@@ -98,8 +98,7 @@ void CRemoteClientDlg::LoadFileInfo()
 			}
 			HTREEITEM hTemp = m_Tree.InsertItem(CStringW(pInfo->szFileName), hTreeSelectded, TVI_LAST);
 			m_Tree.InsertItem(NULL, hTemp, TVI_LAST);
-		}
-		else {
+		} else {
 			m_List.InsertItem(0, CStringW(pInfo->szFileName));
 		}
 
@@ -144,6 +143,11 @@ BEGIN_MESSAGE_MAP(CRemoteClientDlg, CDialogEx)
 	ON_NOTIFY(NM_DBLCLK, IDC_TREE_DIR, &CRemoteClientDlg::OnNMDblclkTreeDir)
 	ON_NOTIFY(NM_CLICK, IDC_TREE_DIR, &CRemoteClientDlg::OnNMClickTreeDir)
 	ON_NOTIFY(NM_RCLICK, IDC_LIST_FILE, &CRemoteClientDlg::OnNMRClickListFile)
+	ON_BN_CLICKED(ID_DOWNLOAD_FILE, &CRemoteClientDlg::OnDownloadFile)
+	ON_BN_CLICKED(ID_DELETE_FILE, &CRemoteClientDlg::OnDeleteFile)
+	ON_BN_CLICKED(ID_RUN_FILE, &CRemoteClientDlg::OnRunFile)
+
+
 END_MESSAGE_MAP()
 
 
@@ -245,7 +249,7 @@ void CRemoteClientDlg::OnBnClickedBtnFileinfo()
 	}
 	CClientSocket* pClient = CClientSocket::getInstance();
 	m_Tree.DeleteAllItems();
-	string           drivers = pClient->GetPacket().strData;
+	string drivers = pClient->GetPacket().strData;
 	//wstring dr;
 	string dr; //本机默认编码为UTF-8，visual studio默认编码为UTF-16，需用wstring
 	drivers += ",";
@@ -253,7 +257,7 @@ void CRemoteClientDlg::OnBnClickedBtnFileinfo()
 	for (size_t i = 0; i < drivers.size(); i++) {
 		if (drivers[i] == ',') {
 			dr += ':';
-			HTREEITEM hTemp = m_Tree.InsertItem((LPCTSTR) CStringW(dr.c_str()), TVI_ROOT, TVI_LAST);
+			HTREEITEM hTemp = m_Tree.InsertItem((LPCTSTR)CStringW(dr.c_str()), TVI_ROOT, TVI_LAST);
 			m_Tree.InsertItem(NULL, hTemp, TVI_LAST);
 			dr.clear();
 			continue;
@@ -269,9 +273,9 @@ CString CRemoteClientDlg::GetPath(HTREEITEM hTree)
 	do {
 		strtmp = m_Tree.GetItemText(hTree);
 		strRet = strtmp + L"\\" + strRet;
-		hTree = m_Tree.GetParentItem(hTree);
+		hTree  = m_Tree.GetParentItem(hTree);
 	} while (hTree != NULL);
-	TRACE("[%s]\r\n", strRet);
+	//TRACE("[%s]\r\n", strRet);
 	return strRet;
 }
 
@@ -280,10 +284,10 @@ void CRemoteClientDlg::DeleteTreeChildrenItem(HTREEITEM hTree)
 	HTREEITEM hSub = NULL;
 	do {
 		hSub = m_Tree.GetChildItem(hTree);
-		if (hSub!=NULL) {
+		if (hSub != NULL) {
 			m_Tree.DeleteItem(hSub);
 		}
-	} while (hSub!=NULL);
+	} while (hSub != NULL);
 }
 
 void CRemoteClientDlg::OnNMDblclkTreeDir(NMHDR* pNMHDR, LRESULT* pResult)
@@ -318,8 +322,73 @@ void CRemoteClientDlg::OnNMRClickListFile(NMHDR* pNMHDR, LRESULT* pResult)
 	CMenu menu;
 	menu.LoadMenu(IDR_MENU_RCLICK);
 	CMenu* pPupup = menu.GetSubMenu(0);
-	if (pPupup!=NULL) {
-		pPupup->TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, ptMouse.x, ptMouse.y,this);
+	if (pPupup != NULL) {
+		pPupup->TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, ptMouse.x, ptMouse.y, this);
 
 	}
 }
+
+void CRemoteClientDlg::OnDownloadFile()
+{
+	int     nListSelected = m_List.GetSelectionMark();
+	CString strFile       = m_List.GetItemText(nListSelected, 0);
+
+	CFileDialog dlg(FALSE, (LPCTSTR)L"*", m_List.GetItemText(nListSelected, 0),OFN_OVERWRITEPROMPT, (LPCTSTR)L"", this,
+	                0, true);
+	if (dlg.DoModal() == IDOK) {
+
+
+		HTREEITEM hSelect = m_Tree.GetSelectedItem();
+		strFile = GetPath(hSelect) + strFile;
+
+		USES_CONVERSION;
+		string strPath(W2A(strFile));
+
+		
+		FILE* pFile = fopen(W2A(dlg.GetPathName()), "wb+");
+		TRACE("pathfile : %s\r\n", W2A(dlg.GetPathName()));
+		if (pFile == NULL) {
+			AfxMessageBox(TEXT("本地没有权限保存该文件,或文件无法创建！"));
+			return;
+		}
+
+		
+
+		TRACE("%s\r\n", LPCWSTR(strFile));
+
+		int ret = SendCommandPacket(4, false, (BYTE*)strPath.c_str(), strPath.size());
+		if (ret < 0) {
+			AfxMessageBox(TEXT("执行下载命令失败！"));
+			TRACE("执行下载失败 ret = %d\r\n", ret);
+			return;
+		}
+
+		CClientSocket* pClient = CClientSocket::getInstance();
+		long long      nLength = *(long long*)pClient->GetPacket().strData.c_str();
+		if (nLength == 0) {
+			AfxMessageBox(TEXT("文件长度为0或无法读取文件！！！"));
+			return;
+		}
+
+		long long nCount = 0;
+
+
+		while (nCount < nLength) {
+			pClient->DealCommand();
+			if (ret < 0) {
+				AfxMessageBox(TEXT("传输失败！！！"));
+				TRACE("传输失败，ret = %d\r\n", ret);
+				break;
+			}
+
+			fwrite(pClient->GetPacket().strData.c_str(), 1, pClient->GetPacket().strData.size(), pFile);
+			nCount += pClient->GetPacket().strData.size();
+		}
+		fclose(pFile);
+		pClient->CloseSocket();
+	}
+}
+
+void CRemoteClientDlg::OnDeleteFile() { }
+
+void CRemoteClientDlg::OnRunFile() { }
