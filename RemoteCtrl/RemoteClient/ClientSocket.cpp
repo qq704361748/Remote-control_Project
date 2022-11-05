@@ -79,18 +79,21 @@ bool CClientSocket:: InitSocket(int nIP,int nPort)
 }
 
 
-#define BUFFER_SIZE 4096
+#define BUFFER_SIZE 4096000
 
 int CClientSocket::DealCommand()
 {
 	if (m_sock == -1) return -1;
-	//char buffer[1024] = { 0 };
 	char* buffer = m_buffer.data();
-	memset(buffer, 0, BUFFER_SIZE);
-	size_t index = 0;
+	if (buffer == NULL)
+	{
+		TRACE("内存不足! \r\n");
+		return -2;
+	}
+	static size_t index = 0;
 	while (true) {
 		size_t len = recv(m_sock, buffer + index, BUFFER_SIZE - index, 0);
-		if (len <= 0) return -1;
+		if ((len <= 0 ) && (index ==0))return -1;
 
 		index += len;
 		len      = index;
@@ -112,7 +115,7 @@ bool CClientSocket::Send(const char* pData, int nSize)
 
 bool CClientSocket::Send(CPacket& pack)
 {
-	TRACE("m_sock = %d\r\n", m_sock);
+	//TRACE("m_sock = %d\r\n", m_sock);
 	if (m_sock == -1) return false;
 	return send(m_sock, pack.Data(), pack.Size(), 0) > 0;
 }
