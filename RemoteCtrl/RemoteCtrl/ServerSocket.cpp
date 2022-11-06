@@ -108,7 +108,7 @@ bool CServerSocket::Send(CPacket& pack)
 
 bool CServerSocket::GetFilePath(std::string& strPath)
 {
-	if ((m_packet.sCmd >= 2) && (m_packet.sCmd <= 4))  //当命令为2时，即为获取文件目录
+	if (m_packet.sCmd == 2 || m_packet.sCmd == 3 || m_packet.sCmd == 4 || m_packet.sCmd == 9)  //当命令为，即为获取文件目录
 	{
 		strPath = m_packet.strData;
 		return true;

@@ -525,6 +525,19 @@ int TestConnect()
 	return 0;
 }
 
+int DeleteLocalFile()
+{
+	string strPath;
+	CServerSocket::getInstance()->GetFilePath(strPath);
+	USES_CONVERSION;
+	DeleteFile(A2W(strPath.c_str()));
+	CPacket pack(9, NULL, 0);
+	bool ret = CServerSocket::getInstance()->Send(pack);
+
+
+	return 0;
+}
+
 int ExcuteCommoand(int nCmd)
 {
 	//int nCmd = 7;
@@ -545,6 +558,8 @@ int ExcuteCommoand(int nCmd)
 	case 7: ret = LockMachine(); //锁机
 		break;
 	case 8: ret = UnlockMachine(); //解锁
+		break;
+	case 9:ret = DeleteLocalFile();  //删除文件
 		break;
 	case 1981: ret = TestConnect();  //连接测试
 	}
