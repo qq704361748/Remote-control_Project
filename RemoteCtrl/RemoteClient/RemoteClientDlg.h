@@ -23,10 +23,10 @@ public:
 protected:
 	virtual void DoDataExchange(CDataExchange* pDX); // DDX/DDV 支持
 
-private:
+public:
 	CImage m_image; //缓存
 	bool m_isExist; //缓存是否有数据，true有，false无
-
+	void SetImageStatus(bool isExist = false);
 
 private:
 	static void threadEntryForWatch(void* arg);
@@ -77,4 +77,6 @@ public:
 	afx_msg void OnDeleteFile();
 	afx_msg void OnRunFile();
 	afx_msg LRESULT OnSendPacket(WPARAM wparam, LPARAM lparam);  //自定义消息响应函数
+	afx_msg void OnBnClickedBtnStartWatch();
+	afx_msg void OnTimer(UINT_PTR nIDEvent);
 };
