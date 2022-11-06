@@ -6,6 +6,7 @@
 #include "RemoteClient.h"
 #include "RemoteClientDlg.h"
 #include "afxdialogex.h"
+#include "WatchDialog.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -63,6 +64,11 @@ void CRemoteClientDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_LIST_FILE, m_List);
 }
 
+void CRemoteClientDlg::SetImageStatus(bool isExist)
+{
+	m_isExist = isExist;
+}
+
 void CRemoteClientDlg::threadEntryForWatch(void* arg)
 {
 	CRemoteClientDlg* m_this = (CRemoteClientDlg*)arg;
@@ -73,28 +79,58 @@ void CRemoteClientDlg::threadEntryForWatch(void* arg)
 void CRemoteClientDlg::threadWatchData()
 {
 	CClientSocket* pClient = NULL;
-	do {
+	do
+	{
 		pClient = CClientSocket::getInstance();
 
 	} while (pClient == NULL);
 
 	ULONGLONG tick = GetTickCount64();
-
-	while (true) {
-		CPacket pack(6, NULL, 0);
-		bool    ret = pClient->Send(pack);
-		if (ret) {
-			int cmd = pClient->DealCommand();
-			if (cmd == 6) {
-				if (m_isExist == false) {
-					BYTE* pData = (BYTE*)pClient->GetPacket().strData.c_str();
-					m_isExist   = true;
+	while (true)//等价于  while(true)
+	{
+		if (m_isExist == false)
+		{
+			int ret = SendMessage(WM_SEND_PACKET, 6 << 1 | 1);
+			if (ret > 0)
+			{
+				std::string strData = pClient->GetPacket().strData;
+				BYTE* pData = (BYTE*)strData.c_str();
+				//TODO:存入CImage
+				HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, 0);
+				if (hMem == NULL)
+				{
+					TRACE("内存不足!");
+					Sleep(10);
+					continue;
 				}
-
+				IStream* pStream = NULL;
+				HRESULT hRet = CreateStreamOnHGlobal(hMem, true, &pStream);
+				if (hRet == S_OK)
+				{
+					ULONG length = 0;
+					pStream->Write(pData, strData.size(), &length);
+					LARGE_INTEGER bg = { 0 };
+					pStream->Seek(bg, STREAM_SEEK_SET, NULL);
+					if ((HBITMAP)m_image != NULL)
+					{
+						m_image.Destroy();
+					}
+					m_image.Load(pStream);
+					m_isExist = true;
+				}
 			}
-		} else {
+			else
+			{
+				Sleep(10);
+			}
+
+		}
+		else
+		{
 			Sleep(10);
 		}
+
+
 
 
 	}
@@ -300,6 +336,8 @@ BEGIN_MESSAGE_MAP(CRemoteClientDlg, CDialogEx)
 	ON_BN_CLICKED(ID_RUN_FILE, &CRemoteClientDlg::OnRunFile)
 	ON_MESSAGE(WM_SEND_PACKET, &CRemoteClientDlg::OnSendPacket)
 
+	ON_BN_CLICKED(IDC_BTN_START_WATCH, &CRemoteClientDlg::OnBnClickedBtnStartWatch)
+	ON_WM_TIMER()
 END_MESSAGE_MAP()
 
 
@@ -546,6 +584,8 @@ LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wparam, LPARAM lparam)
 		//ret = SendCommandPacket(cmd, wparam & 1, (BYTE*)lparam, sizeof(MOUSEEV));
 		break;
 	case 6:
+		// ret = SendCommandPacket(cmd, wparam & 1);
+		// break;
 	case 7:
 	case 8:
 		ret = SendCommandPacket(wparam >> 1, wparam & 1);
@@ -554,4 +594,21 @@ LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wparam, LPARAM lparam)
 		ret = -1;
 	}
 	return ret;
+}
+
+
+void CRemoteClientDlg::OnBnClickedBtnStartWatch()
+{
+	CWatchDialog dlg(this);
+	_beginthread(CRemoteClientDlg::threadEntryForWatch, 0, this);
+	// GetDlgItem(IDC_BTN_START_WATCH)->EnableWindow(FALSE);
+	dlg.DoModal();
+}
+
+
+void CRemoteClientDlg::OnTimer(UINT_PTR nIDEvent)
+{
+	// TODO: 在此添加消息处理程序代码和/或调用默认值
+
+	CDialogEx::OnTimer(nIDEvent);
 }

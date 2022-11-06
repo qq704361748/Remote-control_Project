@@ -411,7 +411,7 @@ int SendScreen()
 		pStream->Seek(bg, STREAM_SEEK_SET,NULL);
 		PBYTE   pData = (PBYTE)GlobalLock(hMme);
 		SIZE_T  nSize = GlobalSize(hMme);
-		CPacket pack(6, NULL, nSize);
+		CPacket pack(6, pData, nSize);
 		CServerSocket::getInstance()->Send(pack);
 		GlobalUnlock(hMme);
 	}
