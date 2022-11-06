@@ -24,6 +24,13 @@ protected:
 	virtual void DoDataExchange(CDataExchange* pDX); // DDX/DDV 支持
 
 private:
+	CImage m_image; //缓存
+	bool m_isExist; //缓存是否有数据，true有，false无
+
+
+private:
+	static void threadEntryForWatch(void* arg);
+	void threadWatchData();
 	static void threadEntryForDownFile(void* arg);
 	void threadDownFile();
 	void LoadFileCurrent();

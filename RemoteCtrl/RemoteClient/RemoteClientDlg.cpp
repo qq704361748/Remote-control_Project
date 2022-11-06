@@ -63,6 +63,44 @@ void CRemoteClientDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_LIST_FILE, m_List);
 }
 
+void CRemoteClientDlg::threadEntryForWatch(void* arg)
+{
+	CRemoteClientDlg* m_this = (CRemoteClientDlg*)arg;
+	m_this->threadWatchData();
+	_endthread();
+}
+
+void CRemoteClientDlg::threadWatchData()
+{
+	CClientSocket* pClient = NULL;
+	do {
+		pClient = CClientSocket::getInstance();
+
+	} while (pClient == NULL);
+
+	ULONGLONG tick = GetTickCount64();
+
+	while (true) {
+		CPacket pack(6, NULL, 0);
+		bool    ret = pClient->Send(pack);
+		if (ret) {
+			int cmd = pClient->DealCommand();
+			if (cmd == 6) {
+				if (m_isExist == false) {
+					BYTE* pData = (BYTE*)pClient->GetPacket().strData.c_str();
+					m_isExist   = true;
+				}
+
+			}
+		} else {
+			Sleep(10);
+		}
+
+
+	}
+}
+
+
 void CRemoteClientDlg::threadEntryForDownFile(void* arg)
 {
 	CRemoteClientDlg* m_this = (CRemoteClientDlg*)arg;
@@ -75,8 +113,8 @@ void CRemoteClientDlg::threadDownFile()
 	int     nListSelected = m_List.GetSelectionMark();
 	CString cStrPath      = m_List.GetItemText(nListSelected, 0);
 
-	CFileDialog dlg(FALSE, (LPCTSTR)TEXT("*"), m_List.GetItemText(nListSelected, 0), OFN_OVERWRITEPROMPT, 
-		(LPCTSTR)TEXT(""), this,0, true);
+	CFileDialog dlg(FALSE, (LPCTSTR)TEXT("*"), m_List.GetItemText(nListSelected, 0), OFN_OVERWRITEPROMPT,
+	                (LPCTSTR)TEXT(""), this, 0, true);
 
 
 	if (dlg.DoModal() == IDOK) {
@@ -301,6 +339,9 @@ BOOL CRemoteClientDlg::OnInitDialog()
 	UpdateData(FALSE);
 	m_dlgStatus.Create(IDD_DLG_STATUS, this);
 	m_dlgStatus.ShowWindow(SW_HIDE);
+	m_isExist = false;
+
+
 	return TRUE; // 除非将焦点设置到控件，否则返回 TRUE
 }
 
@@ -496,12 +537,12 @@ LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wparam, LPARAM lparam)
 	int cmd = wparam >> 1;
 	int ret = 0;
 
-	switch (cmd)
-	{
+	switch (cmd) {
 	case 4:
-		ret = SendCommandPacket(wparam >> 1, wparam & 1, (BYTE*)std::string((LPCSTR)lparam).c_str(), std::string((LPCSTR)lparam).size());
+		ret = SendCommandPacket(wparam >> 1, wparam & 1, (BYTE*)std::string((LPCSTR)lparam).c_str(),
+		                        std::string((LPCSTR)lparam).size());
 		break;
-	case 5://鼠标操作
+	case 5: //鼠标操作
 		//ret = SendCommandPacket(cmd, wparam & 1, (BYTE*)lparam, sizeof(MOUSEEV));
 		break;
 	case 6:
@@ -513,5 +554,4 @@ LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wparam, LPARAM lparam)
 		ret = -1;
 	}
 	return ret;
-
 }
