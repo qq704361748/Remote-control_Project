@@ -24,6 +24,7 @@ protected:
 	virtual void DoDataExchange(CDataExchange* pDX); // DDX/DDV 支持
 
 public:
+	bool m_isClosed;
 	CImage m_image; //缓存
 	bool m_isExist; //缓存是否有数据，true有，false无
 	void SetImageStatus(bool isExist = false);
