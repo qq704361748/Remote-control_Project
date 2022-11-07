@@ -86,7 +86,7 @@ void CRemoteClientDlg::threadWatchData()
 	} while (pClient == NULL);
 
 	ULONGLONG tick = GetTickCount64();
-	while (true)//等价于  while(true)
+	while (!m_isClosed)//等价于  while(true)
 	{
 		if (m_isExist == false)
 		{
@@ -599,10 +599,13 @@ LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wparam, LPARAM lparam)
 
 void CRemoteClientDlg::OnBnClickedBtnStartWatch()
 {
+	m_isClosed = false;
 	CWatchDialog dlg(this);
-	_beginthread(CRemoteClientDlg::threadEntryForWatch, 0, this);
+	HANDLE hThread =(HANDLE)_beginthread(CRemoteClientDlg::threadEntryForWatch, 0, this);
 	// GetDlgItem(IDC_BTN_START_WATCH)->EnableWindow(FALSE);
 	dlg.DoModal();
+	m_isClosed = true;
+	WaitForSingleObject(hThread,500);
 }
 
 
