@@ -581,7 +581,7 @@ LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wparam, LPARAM lparam)
 		                        std::string((LPCSTR)lparam).size());
 		break;
 	case 5: //鼠标操作
-		//ret = SendCommandPacket(cmd, wparam & 1, (BYTE*)lparam, sizeof(MOUSEEV));
+		ret = SendCommandPacket(cmd, wparam & 1, (BYTE*)lparam, sizeof(MOUSEEVENT));
 		break;
 	case 6:
 		// ret = SendCommandPacket(cmd, wparam & 1);
