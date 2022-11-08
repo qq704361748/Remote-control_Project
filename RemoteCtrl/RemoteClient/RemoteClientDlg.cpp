@@ -83,7 +83,7 @@ void CRemoteClientDlg::threadWatchData()
 	CClientSocket* pClient = NULL;
 	do {
 		pClient = CClientSocket::getInstance();
-		
+
 	} while (pClient == NULL);
 
 	ULONGLONG tick = GetTickCount64();
@@ -584,7 +584,7 @@ LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wparam, LPARAM lparam)
 	case 6:
 	// ret = SendCommandPacket(cmd, wparam & 1);
 	// break;
-	case 7:ret = SendCommandPacket(wparam >> 1, wparam & 1);
+	case 7: ret = SendCommandPacket(wparam >> 1, wparam & 1);
 		break;
 	case 8:
 		ret = SendCommandPacket(wparam >> 1, wparam & 1);
@@ -596,29 +596,34 @@ LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wparam, LPARAM lparam)
 }
 
 
-
-
-void CRemoteClientDlg::OnBnClickedBtnStartWatch()  //TODO:未能实现结束非模态对话框进程
+void CRemoteClientDlg::OnBnClickedBtnStartWatch() //TODO:此处可能会造成内存泄漏
 {
-	static int flag = 0;
-	if (flag == 0) {
+	m_isClosed = false;
+	// static int flag = 0;
+	/*if (flag == 0) {
 		flag = 1;
-		m_isClosed = false;
-	
+
 		//m_isClosed     = false;
 		int    ret = dlg.ShowWindow(SW_SHOWNORMAL);
 		HANDLE hThread = (HANDLE)_beginthread(CRemoteClientDlg::threadEntryForWatch, 0, this);
 		WaitForSingleObject(hThread, 500);
 	} else {
 		dlg.ShowWindow(SW_SHOWNORMAL);
-	}
+	}*/
+
+
+	int    ret     = dlg.ShowWindow(SW_SHOWNORMAL);
+	HANDLE hThread = (HANDLE)_beginthread(CRemoteClientDlg::threadEntryForWatch, 0, this);
+	WaitForSingleObject(hThread, 500);
+
+
 	/*m_isClosed = false;
 	CWatchDialog dlg(this);
 	HANDLE hThread = (HANDLE)_beginthread(CRemoteClientDlg::threadEntryForWatch, 0, this);
 	dlg.DoModal();
 	m_isClosed = true;
 	WaitForSingleObject(hThread, 500);*/
-	
+
 
 	// dlg.ShowWindow(SW_SHOWNORMAL);
 	// GetDlgItem(IDC_BTN_START_WATCH)->EnableWindow(FALSE);
@@ -628,16 +633,11 @@ void CRemoteClientDlg::OnBnClickedBtnStartWatch()  //TODO:未能实现结束非�
 
 void CRemoteClientDlg::OnBnClickedBtnLock()
 {
-	// TODO: 在此添加控件通知处理程序代码
-
 	SendMessage(WM_SEND_PACKET, 7 << 1 | 1);
-	
 }
 
 
 void CRemoteClientDlg::OnBnClickedBtnUnlock()
 {
-	// TODO: 在此添加控件通知处理程序代码
 	SendMessage(WM_SEND_PACKET, 8 << 1 | 1);
 }
-
