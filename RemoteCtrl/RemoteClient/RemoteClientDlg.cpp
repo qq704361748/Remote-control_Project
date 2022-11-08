@@ -64,10 +64,12 @@ void CRemoteClientDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_LIST_FILE, m_List);
 }
 
+
 void CRemoteClientDlg::SetImageStatus(bool isExist)
 {
 	m_isExist = isExist;
 }
+
 
 void CRemoteClientDlg::threadEntryForWatch(void* arg)
 {
@@ -79,58 +81,50 @@ void CRemoteClientDlg::threadEntryForWatch(void* arg)
 void CRemoteClientDlg::threadWatchData()
 {
 	CClientSocket* pClient = NULL;
-	do
-	{
+	do {
 		pClient = CClientSocket::getInstance();
-
+		
 	} while (pClient == NULL);
 
 	ULONGLONG tick = GetTickCount64();
-	while (!m_isClosed)//等价于  while(true)
+
+	while (!m_isClosed) //等价于  while(true)
 	{
-		if (m_isExist == false)
-		{
+
+		if (m_isExist == false) {
 			int ret = SendMessage(WM_SEND_PACKET, 6 << 1 | 1);
-			if (ret > 0)
-			{
+			if (ret > 0) {
 				std::string strData = pClient->GetPacket().strData;
-				BYTE* pData = (BYTE*)strData.c_str();
+				BYTE*       pData   = (BYTE*)strData.c_str();
 				//TODO:存入CImage
 				HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, 0);
-				if (hMem == NULL)
-				{
+				if (hMem == NULL) {
 					TRACE("内存不足!");
 					Sleep(10);
 					continue;
 				}
 				IStream* pStream = NULL;
-				HRESULT hRet = CreateStreamOnHGlobal(hMem, true, &pStream);
-				if (hRet == S_OK)
-				{
+				HRESULT  hRet    = CreateStreamOnHGlobal(hMem, true, &pStream);
+				if (hRet == S_OK) {
 					ULONG length = 0;
 					pStream->Write(pData, strData.size(), &length);
-					LARGE_INTEGER bg = { 0 };
+					LARGE_INTEGER bg = {0};
 					pStream->Seek(bg, STREAM_SEEK_SET, NULL);
-					if ((HBITMAP)m_image != NULL)
-					{
+					if ((HBITMAP)m_image != NULL) {
 						m_image.Destroy();
 					}
 					m_image.Load(pStream);
+
 					m_isExist = true;
 				}
-			}
-			else
-			{
+			} else {
 				Sleep(10);
+
 			}
 
-		}
-		else
-		{
+		} else {
 			Sleep(10);
 		}
-
-
 
 
 	}
@@ -322,6 +316,7 @@ int CRemoteClientDlg::SendCommandPacket(int nCmd, bool bAutoClose, BYTE* pData, 
 	return cmd;
 }
 
+
 BEGIN_MESSAGE_MAP(CRemoteClientDlg, CDialogEx)
 	ON_WM_SYSCOMMAND()
 	ON_WM_PAINT()
@@ -335,9 +330,10 @@ BEGIN_MESSAGE_MAP(CRemoteClientDlg, CDialogEx)
 	ON_BN_CLICKED(ID_DELETE_FILE, &CRemoteClientDlg::OnDeleteFile)
 	ON_BN_CLICKED(ID_RUN_FILE, &CRemoteClientDlg::OnRunFile)
 	ON_MESSAGE(WM_SEND_PACKET, &CRemoteClientDlg::OnSendPacket)
-
 	ON_BN_CLICKED(IDC_BTN_START_WATCH, &CRemoteClientDlg::OnBnClickedBtnStartWatch)
 	ON_WM_TIMER()
+	ON_BN_CLICKED(IDC_BTN_LOCK, &CRemoteClientDlg::OnBnClickedBtnLock)
+	ON_BN_CLICKED(IDC_BTN_UNLOCK, &CRemoteClientDlg::OnBnClickedBtnUnlock)
 END_MESSAGE_MAP()
 
 
@@ -378,6 +374,8 @@ BOOL CRemoteClientDlg::OnInitDialog()
 	m_dlgStatus.Create(IDD_DLG_STATUS, this);
 	m_dlgStatus.ShowWindow(SW_HIDE);
 	m_isExist = false;
+
+	dlg.Create(IDD_DLG_WATCH);
 
 
 	return TRUE; // 除非将焦点设置到控件，否则返回 TRUE
@@ -584,9 +582,10 @@ LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wparam, LPARAM lparam)
 		ret = SendCommandPacket(cmd, wparam & 1, (BYTE*)lparam, sizeof(MOUSEEVENT));
 		break;
 	case 6:
-		// ret = SendCommandPacket(cmd, wparam & 1);
-		// break;
-	case 7:
+	// ret = SendCommandPacket(cmd, wparam & 1);
+	// break;
+	case 7:ret = SendCommandPacket(wparam >> 1, wparam & 1);
+		break;
 	case 8:
 		ret = SendCommandPacket(wparam >> 1, wparam & 1);
 		break;
@@ -597,21 +596,48 @@ LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wparam, LPARAM lparam)
 }
 
 
-void CRemoteClientDlg::OnBnClickedBtnStartWatch()
+
+
+void CRemoteClientDlg::OnBnClickedBtnStartWatch()  //TODO:未能实现结束非模态对话框进程
 {
-	m_isClosed = false;
+	static int flag = 0;
+	if (flag == 0) {
+		flag = 1;
+		m_isClosed = false;
+	
+		//m_isClosed     = false;
+		int    ret = dlg.ShowWindow(SW_SHOWNORMAL);
+		HANDLE hThread = (HANDLE)_beginthread(CRemoteClientDlg::threadEntryForWatch, 0, this);
+		WaitForSingleObject(hThread, 500);
+	} else {
+		dlg.ShowWindow(SW_SHOWNORMAL);
+	}
+	/*m_isClosed = false;
 	CWatchDialog dlg(this);
-	HANDLE hThread =(HANDLE)_beginthread(CRemoteClientDlg::threadEntryForWatch, 0, this);
-	// GetDlgItem(IDC_BTN_START_WATCH)->EnableWindow(FALSE);
+	HANDLE hThread = (HANDLE)_beginthread(CRemoteClientDlg::threadEntryForWatch, 0, this);
 	dlg.DoModal();
 	m_isClosed = true;
-	WaitForSingleObject(hThread,500);
+	WaitForSingleObject(hThread, 500);*/
+	
+
+	// dlg.ShowWindow(SW_SHOWNORMAL);
+	// GetDlgItem(IDC_BTN_START_WATCH)->EnableWindow(FALSE);
+	//dlg.DoModal();
 }
 
 
-void CRemoteClientDlg::OnTimer(UINT_PTR nIDEvent)
+void CRemoteClientDlg::OnBnClickedBtnLock()
 {
-	// TODO: 在此添加消息处理程序代码和/或调用默认值
+	// TODO: 在此添加控件通知处理程序代码
 
-	CDialogEx::OnTimer(nIDEvent);
+	SendMessage(WM_SEND_PACKET, 7 << 1 | 1);
+	
 }
+
+
+void CRemoteClientDlg::OnBnClickedBtnUnlock()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	SendMessage(WM_SEND_PACKET, 8 << 1 | 1);
+}
+

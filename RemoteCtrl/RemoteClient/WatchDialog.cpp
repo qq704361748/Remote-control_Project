@@ -7,6 +7,7 @@
 #include "WatchDialog.h"
 #include "RemoteClientDlg.h"
 
+
 // CWatchDialog 对话框
 
 IMPLEMENT_DYNAMIC(CWatchDialog, CDialog)
@@ -57,7 +58,7 @@ BOOL CWatchDialog::OnInitDialog()
 	CDialog::OnInitDialog();
 	//SetStretchBltMode(m_picture.GetDC()->GetSafeHdc(), HALFTONE);
 	SetTimer(0, 45, NULL);
-
+	
 	return TRUE; // return TRUE unless you set the focus to a control
 	// 异常: OCX 属性页应返回 FALSE
 }
@@ -65,20 +66,21 @@ BOOL CWatchDialog::OnInitDialog()
 
 void CWatchDialog::OnTimer(UINT_PTR nIDEvent)
 {
+	
+	
 	// TODO: 在此添加消息处理程序代码和/或调用默认值
 	if (nIDEvent == 0) {
 		CRemoteClientDlg* pParent = (CRemoteClientDlg*)GetParent();
 		if (pParent->m_isExist) {
 
-			SetStretchBltMode(m_picture.GetDC()->GetSafeHdc(), HALFTONE); //此行代码移动到开始阶段
-			
+			SetStretchBltMode(m_picture.GetDC()->GetSafeHdc(), HALFTONE); 
 			//this->MoveWindow(NULL,NULL, pParent->m_image.GetWidth() / 2, pParent->m_image.GetHeight() / 2);
 
 			if (m_nObjWidth == -1)m_nObjWidth = pParent->m_image.GetWidth();
 			if (m_nObjHeight == -1)m_nObjHeight = pParent->m_image.GetHeight();
 
-			int x = pParent->m_image.GetWidth() / 2;
-			int y = pParent->m_image.GetHeight() / 2;
+			int x = pParent->m_image.GetWidth() * 0.8;
+			int y = pParent->m_image.GetHeight() * 0.8;
 
 			SetWindowPos(NULL, 0, 0, x+16, y+38, SWP_NOMOVE);  // +标题栏像素
 			
@@ -92,6 +94,7 @@ void CWatchDialog::OnTimer(UINT_PTR nIDEvent)
 			//pParent->m_image.BitBlt(m_picture.GetDC()->GetSafeHdc(),0,0,SRCCOPY);
 
 			pParent->m_image.StretchBlt(m_picture.GetDC()->GetSafeHdc(), 0, 0, x, y, SRCCOPY);
+
 			m_picture.InvalidateRect(NULL);
 			pParent->m_image.Destroy();
 			pParent->SetImageStatus();
@@ -246,6 +249,17 @@ void CWatchDialog::OnStnClickedWatch()
 void CWatchDialog::OnOK()
 {
 	// TODO: 在此添加专用代码和/或调用基类
+	//this->ShowWindow(HIDE_WINDOW);
 
-	//CDialog::OnOK();
+	CDialog::OnOK();
+}
+
+
+void CWatchDialog::OnCancel()
+{
+	// TODO: 在此添加专用代码和/或调用基类
+
+	//this->ShowWindow(HIDE_WINDOW);
+
+	CDialog::OnCancel();
 }
