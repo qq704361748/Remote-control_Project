@@ -251,7 +251,7 @@ void CWatchDialog::OnOK()
 	// TODO: 在此添加专用代码和/或调用基类
 	//this->ShowWindow(HIDE_WINDOW);
 
-	CDialog::OnOK();
+	//CDialog::OnOK();
 }
 
 
@@ -260,6 +260,10 @@ void CWatchDialog::OnCancel()
 	// TODO: 在此添加专用代码和/或调用基类
 
 	//this->ShowWindow(HIDE_WINDOW);
-
-	CDialog::OnCancel();
+	
+	//m_pParent->m_isClosed = true;
+	CRemoteClientDlg* pParent = (CRemoteClientDlg*)GetParent();
+	pParent->m_isClosed = true;
+	this->ShowWindow(HIDE_WINDOW);
+	//CDialog::OnCancel();
 }

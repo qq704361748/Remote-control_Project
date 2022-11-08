@@ -2,6 +2,7 @@
 #include "afxdialogex.h"
 
 
+
 // CWatchDialog 对话框
 
 class CWatchDialog : public CDialog
@@ -22,7 +23,6 @@ protected:
 
 	DECLARE_MESSAGE_MAP()
 public:
-	
 
 	int m_nObjWidth = -1;
 	int m_nObjHeight = -1;
