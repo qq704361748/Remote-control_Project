@@ -5,3 +5,6 @@ RemoteCtrl.vcxproj.user
 
 Debug
 Release
+RemoteCtrl\Release  
+RemoteCtrl\RemoteCtrl\Release   
+RemoteCtrl\RemoteClient\Release
