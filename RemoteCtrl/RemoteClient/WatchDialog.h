@@ -22,6 +22,8 @@ protected:
 
 	DECLARE_MESSAGE_MAP()
 public:
+	
+
 	int m_nObjWidth = -1;
 	int m_nObjHeight = -1;
 	CPoint UserPoint2RemoteScreenPoint(CPoint& point,bool isScreen = false);
@@ -37,4 +39,5 @@ public:
 	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
 	afx_msg void OnStnClickedWatch();
 	virtual void OnOK();
+	virtual void OnCancel();
 };

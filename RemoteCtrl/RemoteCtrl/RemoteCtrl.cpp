@@ -460,7 +460,7 @@ int UnlockMachine()
 {
 	//dlg.SendMessage(WM_KEYDOWN, 0x41, 0x01E0001);
 	//::SendMessage(dlg.m_hWnd, WM_KEYDOWN, 0x41, 0x01E0001);
-	PostThreadMessage(threadid, WM_KEYDOWN, 0x41, 0);
+	PostThreadMessage(threadid, WM_KEYDOWN, 0x1B, 0);
 	CPacket pack(8, NULL, 0);
 	CServerSocket::getInstance()->Send(pack);
 	return 0;
@@ -502,7 +502,7 @@ unsigned __stdcall threadLockDlg(void* arg)
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 		if (msg.message == WM_KEYDOWN) {
-			TRACE("msg:%08X wparam:%08X lparam:%08X\r\n", msg.message, msg.wParam, msg.lParam);
+			//TRACE("msg:%08X wparam:%08X lparam:%08X\r\n", msg.message, msg.wParam, msg.lParam);
 			if (msg.wParam == 0x1B) {
 				break;
 			}
