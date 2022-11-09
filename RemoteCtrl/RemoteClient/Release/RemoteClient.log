@@ -1,7 +1,0 @@
-﻿  RemoteClientDlg.cpp
-  正在生成代码
-  Previous IPDB and IOBJ mismatch, fall back to full compilation.
-F:\other\test\C\visual_studio\study_project\RemoteCtrl\RemoteClient\WatchDialog.cpp(54): warning C4715: “CWatchDialog::UserPoint2RemoteScreenPoint”: 不是所有的控件路径都返回值
-  All 591 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
-  已完成代码的生成
-  RemoteClient.vcxproj -> F:\other\test\C\visual_studio\study_project\RemoteCtrl\Release\RemoteClient.exe
