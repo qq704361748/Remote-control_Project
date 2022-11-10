@@ -53,25 +53,31 @@ typedef struct file_info
 }        FILEINFO, *PFILEINFO;
 
 
+typedef void (*SOCKET_CALLBACK)(void* arg,int status); //业务回调函数
+
+
 class CServerSocket //服务端Socket类 （用于初始化和结束时销毁  单例）
 {
 public:
-	static CServerSocket* getInstance();                      //得到一个CServerSocket单例
-	bool                  InitSocket();                       //配置Socket（绑定、监听）
+	static CServerSocket* getInstance();          //得到一个CServerSocket单例
+	bool                  InitSocket(short port); //配置Socket（绑定、监听）
+	int                   Run(SOCKET_CALLBACK callback, void* arg, short port = 9527);
 	bool                  AcceptClient();                     //接收Client的Socket连接请求
 	int                   DealCommand();                      //处理接收到的消息
 	bool                  Send(const char* pData, int nSize); //发送消息
 	bool                  Send(CPacket& pack);                //发送数据
 	bool                  GetFilePath(std::string& strPath);  //获取文件路径
-	bool                  GetMouseEvent(MOUSEEVENT& mouse);
-	CPacket&              GetPacket();   //获取命令参数
-	void                  CloseClient(); //断开连接
+	bool                  GetMouseEvent(MOUSEEVENT& mouse);   //获取鼠标事件
+	CPacket&              GetPacket();                        //获取命令参数
+	void                  CloseClient();                      //断开连接
 private:
-	SOCKET  m_sock;   //服务端用于监听的socket
-	SOCKET  m_client; //用于服务端收发消息的socket
-	CPacket m_packet;
-	CServerSocket& operator=(const CServerSocket& ss) = delete; //禁用赋值构造 实现单例
-	CServerSocket(const CServerSocket& ss);                     //拷贝构造 实现单例
+	SOCKET_CALLBACK m_callback;
+	void*           m_arg;
+	SOCKET          m_sock;   //服务端用于监听的socket
+	SOCKET          m_client; //用于服务端收发消息的socket
+	CPacket         m_packet;
+	CServerSocket&  operator=(const CServerSocket& ss) = delete; //禁用赋值构造 实现单例
+	CServerSocket(const CServerSocket& ss);                      //拷贝构造 实现单例
 
 	/* 初始化WSA socket环境 */
 	CServerSocket();

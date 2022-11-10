@@ -44,47 +44,28 @@ int main()
 			nRetCode = 1;
 		} else {
 			// TODO: socket，bind,listen,accept,read,write,close
+
 			CCommand cmd;
-
-
 			CServerSocket* pserver = CServerSocket::getInstance();
-			int            count   = 0;
-			if (pserver->InitSocket() == false) {
-				MessageBox(NULL, TEXT("网络初始化异常，未能成功初始化，请检查网络"), TEXT("网络初始化失败"), MB_OK | MB_ICONERROR);
+
+			int ret = pserver->Run(&CCommand::RunCommand, &cmd);
+
+			switch (ret) {
+			case -1: MessageBox(NULL, TEXT("网络初始化异常，未能成功初始化，请检查网络"), TEXT("网络初始化失败"), MB_OK | MB_ICONERROR);
 				exit(0);
+				break;
+
+			case -2: MessageBox(NULL, TEXT("多次无法正常接入用户，结束程序"), TEXT("接入用户失败"), MB_OK | MB_ICONERROR);
+				exit(0);
+				break;
 			}
-			while (CServerSocket::getInstance() != NULL) {
-
-				if (pserver->AcceptClient() == false) {
-					if (count >= 3) {
-						MessageBox(NULL, TEXT("多次无法正常接入用户，结束程序"), TEXT("接入用户失败"), MB_OK | MB_ICONERROR);
-						exit(0);
-					}
-					MessageBox(NULL, TEXT("无法正常接入用户，自动重试"), TEXT("接入用户失败"), MB_OK | MB_ICONERROR);
-					count++;
-				}
-				TRACE("AcceptClient return true\r\n");
-
-				int ret = pserver->DealCommand();
-				TRACE("DealCommand ret %d\r\n", ret);
-				if (ret > 0) {
-					ret = cmd.ExcuteCommoand(ret);
-					if (ret != 0) {
-						TRACE("执行命令失败：%d ret = %d\r\n", pserver->GetPacket().sCmd, ret);
-					}
-					pserver->CloseClient();
-					TRACE("Command has done!\r\n");
-				}
-			}
-
 
 		}
+
 	} else {
 		// TODO: 更改错误代码以符合需要
 		wprintf(L"错误: GetModuleHandle 失败\n");
 		nRetCode = 1;
 	}
-
 	return nRetCode;
 }
-

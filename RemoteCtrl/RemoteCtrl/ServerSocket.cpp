@@ -27,7 +27,7 @@ CServerSocket* CServerSocket::getInstance()
 	return m_instance;
 }
 
-bool CServerSocket::InitSocket()
+bool CServerSocket::InitSocket(short port)
 {
 	if (m_sock == -1) {
 		return false;
@@ -36,7 +36,7 @@ bool CServerSocket::InitSocket()
 	memset(&serv_adr, 0, sizeof(serv_adr));
 	serv_adr.sin_family           = AF_INET;
 	serv_adr.sin_addr.S_un.S_addr = INADDR_ANY;
-	serv_adr.sin_port             = htons(9527);
+	serv_adr.sin_port             = htons(port);
 
 	//绑定
 	if (bind(m_sock, (sockaddr*)&serv_adr, sizeof(serv_adr)) == -1) {
@@ -47,8 +47,38 @@ bool CServerSocket::InitSocket()
 	if (listen(m_sock, 1) == -1) {
 		return false;
 	}
+
 	return true;
 }
+
+int CServerSocket::Run(SOCKET_CALLBACK callback, void* arg,short port)
+{
+	bool ret = InitSocket(port);
+	if (ret == false) return -1;
+
+	int count = 0;
+	while (true) {
+		if (AcceptClient() == false) {
+			if (count >= 3) {
+				return -2;
+			}
+			
+			count++;
+		}
+
+		int ret = DealCommand();
+		if (ret > 0) {
+			m_callback(m_arg, ret);
+		}
+		CloseClient();
+
+	}
+
+
+	m_callback = callback;
+	m_arg = arg;
+}
+
 
 bool CServerSocket::AcceptClient()
 {
@@ -133,8 +163,11 @@ CPacket& CServerSocket::GetPacket()
 
 void CServerSocket::CloseClient()
 {
-	closesocket(m_client);
-	m_client = INVALID_SOCKET;
+	if (m_client != INVALID_SOCKET) {
+		closesocket(m_client);
+		m_client = INVALID_SOCKET;
+	}
+	
 }
 
 

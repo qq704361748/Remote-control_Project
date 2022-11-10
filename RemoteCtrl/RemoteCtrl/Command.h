@@ -10,7 +10,7 @@ public:
 	CCommand();
 	~CCommand();
 	int ExcuteCommoand(int nCmd);
-	
+	static void RunCommand(void* arg, int status);
 
 protected:
 	typedef int (CCommand::*CMDFUNC)();    //成员函数指针

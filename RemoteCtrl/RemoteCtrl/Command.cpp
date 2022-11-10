@@ -48,6 +48,21 @@ int CCommand::ExcuteCommoand(int nCmd)
 	return (this->*it->second)();
 }
 
+void CCommand::RunCommand(void* arg, int status)
+{
+	CCommand* thiz = (CCommand*)arg;
+	
+	if (status> 0 ) {
+		int ret = thiz->ExcuteCommoand(status);
+		if(ret != 0) {
+			TRACE("执行命令失败：%d ret = %d\r\n", status,  ret);
+		}
+	} else {
+		MessageBox(NULL, TEXT("无法正常接入用户，自动重试"), TEXT("接入用户失败"), MB_OK | MB_ICONERROR);
+	}
+
+}
+
 int CCommand::MakeDriverInfo() //从1开始的值，1->A,2->B,3->C
 {
 	std::string result;
