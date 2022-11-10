@@ -43,12 +43,11 @@ int main()
 			wprintf(L"错误: MFC 初始化失败\n");
 			nRetCode = 1;
 		} else {
-			// TODO: socket，bind,listen,accept,read,write,close
+			
 
 			CCommand cmd;
-			CServerSocket* pserver = CServerSocket::getInstance();
 
-			int ret = pserver->Run(&CCommand::RunCommand, &cmd);
+			int ret = CServerSocket::getInstance()->Run(&CCommand::RunCommand, &cmd);
 
 			switch (ret) {
 			case -1: MessageBox(NULL, TEXT("网络初始化异常，未能成功初始化，请检查网络"), TEXT("网络初始化失败"), MB_OK | MB_ICONERROR);
