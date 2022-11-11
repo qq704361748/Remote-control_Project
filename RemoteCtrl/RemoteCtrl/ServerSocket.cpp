@@ -75,15 +75,16 @@ int CServerSocket::Run(SOCKET_CALLBACK callback, void* arg,short port)
 		int ret = DealCommand();
 		if (ret > 0) {
 			m_callback(m_arg, ret,lstPacket,m_packet);
-			if (lstPacket.size() > 0) {
+
+			while (lstPacket.size() > 0) {
 				Send(lstPacket.front());
 				lstPacket.pop_front();
 			}
 		}
+		
 		CloseClient();
-
 	}
-
+	
 	return 0;
 }
 
@@ -144,30 +145,7 @@ bool CServerSocket::Send(CPacket& pack)
 	return send(m_client, pack.Data(), pack.Size(), 0) > 0;
 }
 
-bool CServerSocket::GetFilePath(std::string& strPath)
-{
-	if (m_packet.sCmd == 2 || m_packet.sCmd == 3 || m_packet.sCmd == 4 || m_packet.sCmd == 9)  //当命令为，即为获取文件目录
-	{
-		strPath = m_packet.strData;
-		return true;
-	}
-	return false;
-}
 
-
-bool CServerSocket::GetMouseEvent(MOUSEEVENT& mouse)
-{
-	if (m_packet.sCmd == 5) {
-		memcpy(&mouse, m_packet.strData.c_str(), sizeof(MOUSEEVENT));
-		return true;
-	}
-	return false;
-}
-
-CPacket& CServerSocket::GetPacket()
-{
-	return m_packet;
-}
 
 void CServerSocket::CloseClient()
 {

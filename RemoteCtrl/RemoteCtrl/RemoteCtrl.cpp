@@ -43,7 +43,6 @@ int main()
 			wprintf(L"错误: MFC 初始化失败\n");
 			nRetCode = 1;
 		} else {
-			
 
 			CCommand cmd;
 
@@ -58,7 +57,6 @@ int main()
 				exit(0);
 				break;
 			}
-
 		}
 
 	} else {

@@ -251,6 +251,7 @@ void CRemoteClientDlg::LoadFileInfo()
 	GetCursorPos(&ptMouse);
 	m_Tree.ScreenToClient(&ptMouse);
 
+	//HTREEITEM hTreeSelectded = m_Tree.GetSelectedItem();
 	HTREEITEM hTreeSelectded = m_Tree.HitTest(ptMouse, 0);
 	if (hTreeSelectded == NULL) {
 		return;
@@ -266,6 +267,7 @@ void CRemoteClientDlg::LoadFileInfo()
 	int            ncmd    = SendCommandPacket(2, false, (BYTE*)str.c_str(), str.length());
 	PFILEINFO      pInfo   = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();
 	CClientSocket* pClient = CClientSocket::getInstance();
+	int count = 0;
 	while (pInfo->HasNext) {
 		TRACE("Name [%s] isdir %d\r\n", pInfo->szFileName, pInfo->IsDirectory);
 		if (pInfo->IsDirectory) {
@@ -290,8 +292,9 @@ void CRemoteClientDlg::LoadFileInfo()
 			break;
 		}
 		pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();
+		count++;
 	}
-
+	TRACE("接收到: %d", count);
 
 	pClient->CloseSocket();
 }
@@ -368,7 +371,7 @@ BOOL CRemoteClientDlg::OnInitDialog()
 
 	// TODO: 在此添加额外的初始化代码
 	UpdateData();
-	m_server_address = 0x7F000001;
+	m_server_address = 0xC0A85F8B;// 0x7F000001
 	m_nPort          = TEXT("9527");
 	UpdateData(FALSE);
 	m_dlgStatus.Create(IDD_DLG_STATUS, this);
@@ -442,8 +445,8 @@ void CRemoteClientDlg::OnBnClickedBtnFileinfo()
 	CClientSocket* pClient = CClientSocket::getInstance();
 	m_Tree.DeleteAllItems();
 	string drivers = pClient->GetPacket().strData;
-	//wstring dr;
-	string dr; //本机默认编码为UTF-8，visual studio默认编码为UTF-16，需用wstring
+	string dr; 
+	
 	drivers += ",";
 
 	for (size_t i = 0; i < drivers.size(); i++) {
@@ -456,6 +459,11 @@ void CRemoteClientDlg::OnBnClickedBtnFileinfo()
 		}
 		dr += drivers[i];
 	}
+	// if (dr.size() > 0 ) {
+	// 	dr += ':';
+	// 	HTREEITEM hTemp = m_Tree.InsertItem((LPCTSTR)CStringW(dr.c_str()), TVI_ROOT, TVI_LAST);
+	// 	m_Tree.InsertItem(NULL, hTemp, TVI_LAST);
+	// }
 }
 
 
@@ -464,10 +472,10 @@ CString CRemoteClientDlg::GetPath(HTREEITEM hTree)
 	CString strRet, strtmp;
 	do {
 		strtmp = m_Tree.GetItemText(hTree);
-		strRet = strtmp + L"\\" + strRet;
+		strRet = strtmp + TEXT("\\") + strRet;
 		hTree  = m_Tree.GetParentItem(hTree);
 	} while (hTree != NULL);
-	//TRACE("[%s]\r\n", strRet);
+	TRACE("[%s]\r\n", strRet);
 	return strRet;
 }
 

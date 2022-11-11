@@ -70,9 +70,9 @@ int CCommand::MakeDriverInfo(std::list<CPacket>& lstPacket, CPacket& inPacket) /
 		if (_chdrive(i) == 0) //_chdrive()如果该盘存在，则值为0
 		{
 			if (result.size() > 0) {
-				result += ',';
+				result += ",";
 			}
-			result += 'A' + i - 1;
+			result +='A' + i - 1;
 		}
 	}
 	lstPacket.push_back(CPacket(1, (BYTE*)result.c_str(), result.size()));
@@ -107,7 +107,7 @@ int CCommand::MakeDirectoryInfo(std::list<CPacket>& lstPacket, CPacket& inPacket
 		lstPacket.push_back(CPacket(2, (BYTE*)&finfo, sizeof(finfo)));
 		return -3;
 	}
-
+	int count = 0;
 	do {
 		FILEINFO finfo;
 		finfo.IsDirectory = (fdata.attrib & _A_SUBDIR) != 0;
@@ -115,8 +115,9 @@ int CCommand::MakeDirectoryInfo(std::list<CPacket>& lstPacket, CPacket& inPacket
 		TRACE("%s\r\n", finfo.szFileName);
 		//listFileInfos.push_back(finfo);
 		lstPacket.push_back(CPacket(2, (BYTE*)&finfo, sizeof(finfo)));
+		count++;
 	} while (!_findnext(hfind, &fdata));
-
+	TRACE("发送了 %d 次目录\r\n", count);
 	FILEINFO finfo;
 	finfo.HasNext = FALSE;
 	lstPacket.push_back(CPacket(2, (BYTE*)&finfo, sizeof(finfo)));
@@ -155,7 +156,7 @@ int CCommand::DownloadFile(std::list<CPacket>& lstPacket, CPacket& inPacket)
 		size_t rlen         = 0;
 		do {
 			rlen = fread(buffer, 1, 1024, pFile);
-			lstPacket.push_back(CPacket(4, (BYTE*)&buffer, rlen));
+			lstPacket.push_back(CPacket(4, (BYTE*)buffer, rlen));
 		} while (rlen >= 1024);
 
 		fclose(pFile);

@@ -20,9 +20,6 @@ protected:
 	int      DealCommand();                      //处理接收到的消息
 	bool     Send(const char* pData, int nSize); //发送消息
 	bool     Send(CPacket& pack);                //发送数据
-	bool     GetFilePath(std::string& strPath);  //获取文件路径
-	bool     GetMouseEvent(MOUSEEVENT& mouse);   //获取鼠标事件
-	CPacket& GetPacket();                        //获取命令参数
 	void     CloseClient();                      //断开连接
 private:
 	SOCKET_CALLBACK m_callback;

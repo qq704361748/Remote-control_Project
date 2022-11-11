@@ -79,7 +79,7 @@ bool CClientSocket:: InitSocket(int nIP,int nPort)
 }
 
 
-#define BUFFER_SIZE 40960000
+#define BUFFER_SIZE 4096000
 
 int CClientSocket::DealCommand()
 {

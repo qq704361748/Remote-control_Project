@@ -20,6 +20,10 @@ protected:
 	unsigned                threadid;
 
 protected:
+	static unsigned __stdcall threadLockDlg(void* arg); //子线程执行锁机
+	void threadLockDlgMain();
+
+
 	int MakeDriverInfo(std::list<CPacket>& lstPacket, CPacket& inPacket);    //获得磁盘信息
 	int MakeDirectoryInfo(std::list<CPacket>& lstPacket, CPacket& inPacket); //获取指定文件夹下的信息
 	int RunFile(std::list<CPacket>& lstPacket, CPacket& inPacket);           //运行文件
@@ -30,7 +34,4 @@ protected:
 	int UnlockMachine(std::list<CPacket>& lstPacket, CPacket& inPacket);     //解锁
 	int DeleteLocalFile(std::list<CPacket>& lstPacket, CPacket& inPacket);   //删除文件
 	int TestConnect(std::list<CPacket>& lstPacket, CPacket& inPacket);       //连接测试
-
-	static unsigned __stdcall threadLockDlg(void* arg); //子线程执行锁机
-	void threadLockDlgMain();
 };
