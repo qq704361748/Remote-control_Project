@@ -20,7 +20,7 @@ public:
 	CPacket& operator=(const CPacket& pack);             //赋值构造
 
 	int         Size(); //获取包数据大小
-	const char* Data(); //获取包数据
+	const char* Data(std::string& strOut) const; //获取包数据
 
 	~CPacket() = default;
 
@@ -29,7 +29,7 @@ public:
 	WORD        sCmd;    //命令
 	std::string strData; //数据
 	WORD        sSum;    //和校验
-	std::string strOut;  //整个包的数据
+	//std::string strOut;  //整个包的数据
 };
 
 #pragma pack(pop)
@@ -66,15 +66,22 @@ class CClientSocket //服务端Socket类 （用于初始化和结束时销毁  �
 {
 public:
 	static CClientSocket* getInstance();                          //得到一个CClientSocket单例
-	bool                  InitSocket(int nIP, int nPort); //配置Socket（绑定、监听）
+	bool                  InitSocket(); //配置Socket（绑定、监听）
 	int                   DealCommand();                          //处理接收到的消息
 	bool                  Send(const char* pData, int nSize);     //发送消息
-	bool                  Send(CPacket& pack);                    //发送数据
+	bool                  Send(const CPacket& pack);                    //发送数据
 	bool                  GetFilePath(std::string& strPath);      //获取文件路径
 	bool                  GetMouseEvent(MOUSEEVENT& mouse);
 	CPacket&              GetPacket();
 	void                  CloseSocket();
+
+	void UpdateAddress(int nIP, int nPort);
+
 private:
+	int m_nIP;
+	int m_nPort;
+
+
 	vector<char> m_buffer;
 	SOCKET       m_sock;
 	CPacket      m_packet;

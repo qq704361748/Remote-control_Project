@@ -71,7 +71,7 @@ void CWatchDialog::OnTimer(UINT_PTR nIDEvent)
 	// TODO: 在此添加消息处理程序代码和/或调用默认值
 	if (nIDEvent == 0) {
 		CRemoteClientDlg* pParent = (CRemoteClientDlg*)GetParent();
-		if (pParent->m_isExist) {
+		if (pParent->m_isFull) {
 
 			SetStretchBltMode(m_picture.GetDC()->GetSafeHdc(), HALFTONE); 
 			//this->MoveWindow(NULL,NULL, pParent->m_image.GetWidth() / 2, pParent->m_image.GetHeight() / 2);

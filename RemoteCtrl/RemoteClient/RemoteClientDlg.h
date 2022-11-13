@@ -7,6 +7,7 @@
 #include "StatusDlg.h"
 #include "WatchDialog.h"
 
+
 #define WM_SEND_PACKET (WM_USER+1)  //自定义消息   发送数据包消息
 
 // CRemoteClientDlg 对话框
@@ -28,8 +29,8 @@ public:
 	CWatchDialog dlg;
 	bool m_isClosed;
 	CImage m_image; //缓存
-	bool m_isExist; //缓存是否有数据，true有，false无
-	void SetImageStatus(bool isExist = false);
+	bool m_isFull; //缓存是否有数据，true有，false无
+	void SetImageStatus(bool isFull = false);
 
 private:
 	static void threadTest(void* arg);
@@ -42,22 +43,7 @@ private:
 	void LoadFileInfo();
 	CString GetPath(HTREEITEM hTree);
 	void DeleteTreeChildrenItem(HTREEITEM hTree);
-	/**
-	 * \brief 
-	 * \param nCmd  \n
-	 * 1.查看磁盘分区 \n
-	 * 2.查看指定目录下的文件 \n
-	 * 3.打开文件 \n
-	 * 4.下载文件 \n
-	 * 5.鼠标操作 \n
-	 * 6.发送屏幕内容 \n
-	 * 7.锁机 \n
-	 * 8.解锁 \n
-	 * 9.删除文件 \n
-	 * \return 命令cmd
-	 */
-	int SendCommandPacket(int nCmd, bool bAutoClose=true,BYTE* pData=NULL,size_t nLength=0);
-	// 实现
+
 protected:
 	HICON m_hIcon;
 	CStatusDlg m_dlgStatus;
@@ -86,6 +72,8 @@ public:
 	//afx_msg void OnTimer(UINT_PTR nIDEvent);
 	afx_msg void OnBnClickedBtnLock();
 	afx_msg void OnBnClickedBtnUnlock();
+	afx_msg void OnIpnFieldchangedIpaddressServ(NMHDR* pNMHDR, LRESULT* pResult);
+	afx_msg void OnEnChangeEditPort();
 };
 
 

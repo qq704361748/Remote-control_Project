@@ -45,7 +45,7 @@ CClientSocket* CClientSocket::getInstance()
 	return m_instance;
 }
 
-bool CClientSocket:: InitSocket(int nIP,int nPort)
+bool CClientSocket:: InitSocket()
 {
 	if (m_sock != INVALID_SOCKET) {
 		CloseSocket();
@@ -59,8 +59,8 @@ bool CClientSocket:: InitSocket(int nIP,int nPort)
 	
 	serv_adr.sin_family           = AF_INET;
 	// TRACE("addr %08X nIP %08X\r\n", inet_addr("127.0.0.1"), nIP);
-	serv_adr.sin_addr.S_un.S_addr = htonl(nIP);
-	serv_adr.sin_port             = htons(nPort);
+	serv_adr.sin_addr.S_un.S_addr = htonl(m_nIP);
+	serv_adr.sin_port             = htons(m_nPort);
 
 	if (serv_adr.sin_addr.S_un.S_addr == INADDR_NONE) {
 		AfxMessageBox(TEXT("指定的IP地址不存在！"));
@@ -113,11 +113,13 @@ bool CClientSocket::Send(const char* pData, int nSize)
 	return send(m_sock, pData, nSize, 0) > 0;
 }
 
-bool CClientSocket::Send(CPacket& pack)
+bool CClientSocket::Send(const CPacket& pack)
 {
 	//TRACE("m_sock = %d\r\n", m_sock);
 	if (m_sock == -1) return false;
-	return send(m_sock, pack.Data(), pack.Size(), 0) > 0;
+	std::string strOut;
+	pack.Data(strOut);
+	return send(m_sock, strOut.c_str(), strOut.size(), 0) > 0;
 }
 
 bool CClientSocket::GetFilePath(std::string& strPath)
@@ -151,13 +153,24 @@ void CClientSocket::CloseSocket()
 	m_sock = INVALID_SOCKET;
 }
 
+void CClientSocket::UpdateAddress(int nIP, int nPort)
+{
+	if (m_nIP != nIP || m_nPort != nPort)
+	{
+		m_nIP = nIP;
+		m_nPort = nPort;
+	}
+}
+
 
 CClientSocket::CClientSocket(const CClientSocket& ss)
 {
 	m_sock = ss.m_sock;
+	m_nIP = ss.m_nIP;
+	m_nPort = ss.m_nPort;
 }
 
-CClientSocket::CClientSocket()
+CClientSocket::CClientSocket():m_nIP(INADDR_ANY), m_nPort(0)
 {
 	//m_sock = INVALID_SOCKET;
 	if (InitSockEnv() == FALSE) {
@@ -299,7 +312,7 @@ int CPacket::Size() //获取包数据大小
 	return nLength + 6;
 }
 
-const char* CPacket::Data()
+const char* CPacket::Data(std::string& strOut) const
 {
 	strOut.resize(nLength + 6);
 	BYTE* pData   = (BYTE*)strOut.c_str();

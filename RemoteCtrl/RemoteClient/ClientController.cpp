@@ -17,8 +17,8 @@ CClientController* CClientController::getInstance()
 			UINT    nMsg;
 			MSGFUNC func;
 		}           MsgFuncs[] = {
-					//{WM_SEND_PACKET, &CClientController::OnSendPack},
-					//{WM_SEND_DATA, &CClientController::OnSendData},
+					{WM_SEND_PACKET, &CClientController::OnSendPack},
+					{WM_SEND_DATA, &CClientController::OnSendData},
 					{WM_SHOW_STATUS, &CClientController::OnShowStatus},
 					{WM_SHOW_WATCH, &CClientController::OnShowWatch},
 					{(UINT)- 1,NULL}
@@ -58,6 +58,50 @@ LRESULT CClientController::MySendMessage(MSG msg)
 	return info.result;
 }
 
+void CClientController::UpdateAddress(int nIP, int nPort)
+{
+	CClientSocket::getInstance()->UpdateAddress(nIP, nPort);
+}
+
+int CClientController::DealCommand()
+{
+	return CClientSocket::getInstance()->DealCommand();
+}
+
+void CClientController::CloseSocket()
+{
+	CClientSocket::getInstance()->CloseSocket();
+}
+
+bool CClientController::SendPacket(const CPacket& pack)
+{
+	CClientSocket* pClient = CClientSocket::getInstance();
+	if (pClient->InitSocket() == false) return false;
+	return pClient->Send(pack);
+
+}
+
+int CClientController::SendCommandPacket(int nCmd , bool bAutoClose, BYTE* pData, size_t nLength)
+{
+	CClientSocket* pClient = CClientSocket::getInstance();
+	if (pClient->InitSocket() == false) return false;
+	pClient->Send(CPacket(nCmd,pData,nLength));
+
+	int cmd = DealCommand();
+	TRACE("ACK:%d\r\n", cmd);
+	if (bAutoClose) {
+		CloseSocket();
+	}
+	return cmd;
+
+}
+
+int CClientController::GetImage(CImage& image)
+{
+	CClientSocket* pClient = CClientSocket::getInstance();
+	return CTools::Bytes2Image(image, pClient->GetPacket().strData);
+}
+
 void CClientController::releaseInstance()
 {
 	if (m_instance != NULL) {
@@ -66,20 +110,22 @@ void CClientController::releaseInstance()
 	}
 }
 
-// LRESULT CClientController::OnSendPack(UINT nMsg, WPARAM wParam, LPARAM lParam)
-// {
-// 	// CClientSocket* pClient = CClientSocket::getInstance();
-// 	// CPacket* pPacket = (CPacket*)wParam;
-// 	//
-// 	// return pClient->Send(*pPacket);
-// }
 
-// LRESULT CClientController::OnSendData(UINT nMsg, WPARAM wParam, LPARAM lParam)
-// {
-// 	//ClientSocket* pClient = ClientSocket::getInstance();
-// //	//char* pBuffer = (char*)wParam;
-// //	//return pClient->sendData(pBuffer,(int)lparam);
-// }
+
+LRESULT CClientController::OnSendPack(UINT nMsg, WPARAM wParam, LPARAM lParam)
+{
+	CClientSocket* pClient = CClientSocket::getInstance();
+	CPacket* pPacket = (CPacket*)wParam;
+	
+	return pClient->Send(*pPacket);
+}
+
+LRESULT CClientController::OnSendData(UINT nMsg, WPARAM wParam, LPARAM lParam)
+{
+	CClientSocket* pClient = CClientSocket::getInstance();
+	char* pBuffer = (char*)wParam;
+	return pClient->Send(pBuffer,(int)lParam);
+}
 
 LRESULT CClientController::OnShowStatus(UINT nMsg, WPARAM wParam, LPARAM lParam)
 {

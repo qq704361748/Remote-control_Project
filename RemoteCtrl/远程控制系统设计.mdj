@@ -27186,7 +27186,8 @@
 											"top": 282,
 											"width": 512.6875,
 											"height": 13,
-											"text": "+m_isClosed: bool",
+											"text": "+
+												Closed: bool",
 											"horizontalAlignment": 0
 										},
 										{
@@ -27203,7 +27204,7 @@
 											"top": 297,
 											"width": 512.6875,
 											"height": 13,
-											"text": "+m_isExist: bool",
+											"text": "+m_isFull: bool",
 											"horizontalAlignment": 0
 										},
 										{
@@ -32591,7 +32592,7 @@
 							"_parent": {
 								"$ref": "AAAAAAGEaiuCx4tuCXc="
 							},
-							"name": "m_isExist",
+							"name": "m_isFull",
 							"type": "bool"
 						},
 						{

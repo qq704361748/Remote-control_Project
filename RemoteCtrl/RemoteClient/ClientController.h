@@ -1,11 +1,11 @@
 #pragma once
+#include "resource.h"
 #include "ClientSocket.h"
 #include "WatchDialog.h"
 #include "RemoteClientDlg.h"
 #include "StatusDlg.h"
 #include <map>
-#include "resource.h"
-
+#include "Tools.h"
 
 
 #define WM_SEND_PACK (WM_USER+1)  //发送包数据
@@ -24,11 +24,39 @@ public:
 	int Invoke(CWnd*& pMainWnd); //启动
 
 	LRESULT MySendMessage(MSG msg); //发送消息
+
+	void UpdateAddress(int nIP, int nPort);
+
+	int DealCommand();
+
+	void CloseSocket();
+
+	bool SendPacket(const CPacket& pack);
+
+		/**
+	 * \brief
+	 * \param nCmd  \n
+	 * 1.查看磁盘分区 \n
+	 * 2.查看指定目录下的文件 \n
+	 * 3.打开文件 \n
+	 * 4.下载文件 \n
+	 * 5.鼠标操作 \n
+	 * 6.发送屏幕内容 \n
+	 * 7.锁机 \n
+	 * 8.解锁 \n
+	 * 9.删除文件 \n
+	 * \return 命令cmd
+	 */
+
+	 // 实现
+	int SendCommandPacket(int nCmd, bool bAutoClose = true, BYTE* pData = NULL, size_t nLength = 0);
+
+	int GetImage(CImage& image);
 protected:
 	static void releaseInstance();
 
-	//LRESULT OnSendPack(UINT nMsg, WPARAM wParam, LPARAM lParam);
-	//LRESULT OnSendData(UINT nMsg, WPARAM wParam, LPARAM lParam);
+	LRESULT OnSendPack(UINT nMsg, WPARAM wParam, LPARAM lParam);
+	LRESULT OnSendData(UINT nMsg, WPARAM wParam, LPARAM lParam);
 	LRESULT OnShowStatus(UINT nMsg, WPARAM wParam, LPARAM lParam);
 	LRESULT OnShowWatch(UINT nMsg, WPARAM wParam, LPARAM lParam);
 
