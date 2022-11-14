@@ -5,6 +5,8 @@
 #include "RemoteClient.h"
 #include "afxdialogex.h"
 #include "WatchDialog.h"
+
+#include "ClientController.h"
 #include "RemoteClientDlg.h"
 
 
@@ -51,6 +53,7 @@ CPoint CWatchDialog::UserPoint2RemoteScreenPoint(CPoint& point, bool isScreen)
 		float x = m_nObjWidth / clientRect.Width();
 		return CPoint(point.x * m_nObjWidth / clientRect.Width(), point.y * m_nObjHeight / clientRect.Height());
 	}
+	return 0;
 }
 
 BOOL CWatchDialog::OnInitDialog()
@@ -97,7 +100,7 @@ void CWatchDialog::OnTimer(UINT_PTR nIDEvent)
 
 			m_picture.InvalidateRect(NULL);
 			pParent->m_image.Destroy();
-			pParent->SetImageStatus();
+			pParent->m_isFull = false;
 		} else { }
 	}
 	CDialog::OnTimer(nIDEvent);
@@ -259,11 +262,9 @@ void CWatchDialog::OnCancel()
 {
 	// TODO: 在此添加专用代码和/或调用基类
 
-	//this->ShowWindow(HIDE_WINDOW);
-	
-	//m_pParent->m_isClosed = true;
-	CRemoteClientDlg* pParent = (CRemoteClientDlg*)GetParent();
-	pParent->m_isClosed = true;
+	auto* pCtrl = CClientController::getInstance();
+
+	pCtrl->m_isClosed = true;
 	this->ShowWindow(HIDE_WINDOW);
 	//CDialog::OnCancel();
 }

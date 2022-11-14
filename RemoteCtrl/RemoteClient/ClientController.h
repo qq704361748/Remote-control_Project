@@ -52,6 +52,12 @@ public:
 	int SendCommandPacket(int nCmd, bool bAutoClose = true, BYTE* pData = NULL, size_t nLength = 0);
 
 	int GetImage(CImage& image);
+
+	int DownFile(CString strPath);
+
+	void StartWathScreen();
+	bool m_isClosed; //监视窗口是否关闭（用于控制图片是否传输）
+
 protected:
 	static void releaseInstance();
 
@@ -60,6 +66,11 @@ protected:
 	LRESULT OnShowStatus(UINT nMsg, WPARAM wParam, LPARAM lParam);
 	LRESULT OnShowWatch(UINT nMsg, WPARAM wParam, LPARAM lParam);
 
+	void threadDownloadFile();
+	static void threadDownloadEntry(void* arg);
+
+	void threadWatchScreen();
+	static void threadWatchScreen(void* arg);
 private:
 	CClientController();
 	~CClientController();
@@ -111,6 +122,14 @@ private:
 	CStatusDlg                           m_statusDlg;
 	HANDLE                               m_hThread;
 	unsigned                             m_nThreadID;
+
+	CString m_strRemote;//下载文件的远程路径
+	CString m_strLocal;//下载文件的本地保存路径
+	HANDLE m_hThreadDownload;
+
+	HANDLE m_hThreadWatch;
+	
+
 
 
 	static CClientController* m_instance;

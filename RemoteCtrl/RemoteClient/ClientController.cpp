@@ -102,6 +102,45 @@ int CClientController::GetImage(CImage& image)
 	return CTools::Bytes2Image(image, pClient->GetPacket().strData);
 }
 
+int CClientController::DownFile(CString strPath)
+{
+
+	CFileDialog dlg(FALSE, (LPCTSTR)TEXT("*"), strPath, OFN_OVERWRITEPROMPT,
+		(LPCTSTR)TEXT(""), &m_remoteDlg, 0, true);
+
+	if (dlg.DoModal() == IDOK) {
+
+		m_strRemote = strPath;
+		m_strLocal = dlg.GetPathName();
+
+		m_hThreadDownload = (HANDLE)_beginthread(&CClientController::threadDownloadEntry, 0, this);
+
+		if (WaitForSingleObject(m_hThreadDownload, 0) != WAIT_TIMEOUT)
+		{
+			return -1;
+		}
+
+		m_remoteDlg.BeginWaitCursor();
+		m_statusDlg.m_info.SetWindowTextW(L"命令执行中");
+		m_statusDlg.ShowWindow(SW_SHOW);
+		m_statusDlg.CenterWindow(&m_remoteDlg);
+		m_statusDlg.SetActiveWindow();
+
+	} 
+	return 0;
+}
+
+void CClientController::StartWathScreen()
+{
+	m_isClosed = false;
+	
+	CWatchDialog dlg(&m_remoteDlg);
+	m_hThreadWatch = (HANDLE)_beginthread(&CClientController::threadWatchScreen, 0, this);
+	int    ret = dlg.ShowWindow(SW_SHOWNORMAL);
+	WaitForSingleObject(m_hThreadWatch, 500);
+
+}
+
 void CClientController::releaseInstance()
 {
 	if (m_instance != NULL) {
@@ -131,20 +170,110 @@ LRESULT CClientController::OnShowStatus(UINT nMsg, WPARAM wParam, LPARAM lParam)
 {
 	return m_statusDlg.ShowWindow(SW_SHOW);
 
-
 }
 
 LRESULT CClientController::OnShowWatch(UINT nMsg, WPARAM wParam, LPARAM lParam)
 {
-
 	return m_watchDlg.ShowWindow(SW_SHOWNORMAL);
+}
 
+void CClientController::threadDownloadFile()
+{
+	FILE* pFile = fopen(CW2A(m_strLocal), "wb+");
+	if (pFile == NULL)
+	{
+		AfxMessageBox(TEXT("本地无权限,文件无法创建"));
+		m_statusDlg.ShowWindow(SW_HIDE);
+		m_remoteDlg.EndWaitCursor();
+		return;
+	}
+	CClientSocket* pClient = CClientSocket::getInstance();
+
+	do
+	{
+		int ret = SendCommandPacket(4, false, (BYTE*)(LPCTSTR)m_strRemote, m_strRemote.GetLength());
+
+		long long nLength = *(long long*)pClient->GetPacket().strData.c_str();
+		if (nLength == 0)
+		{
+			AfxMessageBox(L"文件长度为0,或无法读取");
+			pClient->CloseSocket();
+			return;
+		}
+
+		long long nCount = 0;
+		while (nCount < nLength)
+		{
+			ret = pClient->DealCommand();
+			if (ret < 0)
+			{
+				AfxMessageBox(TEXT("传输失败!!!"));
+				TRACE("传输失败  %d\r\n", ret);
+				pClient->CloseSocket();
+				return;
+			}
+			fwrite(pClient->GetPacket().strData.c_str(), 1, pClient->GetPacket().strData.size(), pFile);
+			nCount += pClient->GetPacket().strData.size();
+		}
+	} while (false);
+
+	fclose(pFile);
+	pClient->CloseSocket();
+	m_statusDlg.ShowWindow(SW_HIDE);
+	m_remoteDlg.EndWaitCursor();
+	m_remoteDlg.MessageBox(TEXT("下载完成"), TEXT("完成"));
 
 
 }
 
+void CClientController::threadDownloadEntry(void* arg)
+{
+	CClientController* thiz = (CClientController*)arg;
+	thiz->threadDownloadFile();
+	_endthread();
+}
+
+void CClientController::threadWatchScreen()
+{
+	Sleep(50);
+
+	while (!m_isClosed) //等价于  while(true)
+	{
+		
+		if (m_remoteDlg.m_isFull == false) {
+			int ret = SendCommandPacket(6);
+
+			if (ret == 6) {
+				if (GetImage(m_remoteDlg.m_image) == 0) {
+					m_remoteDlg.m_isFull = true;
+				}
+				else {
+					TRACE(TEXT("获取图片失败！\r\n"));
+				}
+			}
+			else {
+				Sleep(10);
+			}
+		}
+		else {
+			Sleep(10);
+		}
+	}
+
+}
+
+void CClientController::threadWatchScreen(void* arg)
+{
+	CClientController* thiz = (CClientController*)arg;
+	thiz->threadWatchScreen();
+	_endthread();
+}
+
 CClientController::CClientController():m_statusDlg(&m_remoteDlg),m_watchDlg(&m_remoteDlg)
 {
+	m_isClosed = true;
+	m_hThreadWatch = INVALID_HANDLE_VALUE;
+	m_hThreadDownload = INVALID_HANDLE_VALUE;
 
 	m_hThread = INVALID_HANDLE_VALUE;
 	m_nThreadID = -1;

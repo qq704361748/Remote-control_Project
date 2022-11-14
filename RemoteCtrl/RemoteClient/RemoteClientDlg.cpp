@@ -69,120 +69,6 @@ void CRemoteClientDlg::DoDataExchange(CDataExchange* pDX)
 }
 
 
-void CRemoteClientDlg::SetImageStatus(bool isFull)
-{
-	m_isFull = isFull;
-}
-
-
-void CRemoteClientDlg::threadEntryForWatch(void* arg)
-{
-	CRemoteClientDlg* m_this = (CRemoteClientDlg*)arg;
-	m_this->threadWatchData();
-	_endthread();
-}
-
-void CRemoteClientDlg::threadWatchData()
-{
-	Sleep(50);
-	CClientController* pCtrl = CClientController::getInstance();
-
-	while (!m_isClosed) //等价于  while(true)
-	{
-
-		if (m_isFull == false) {
-			int ret = pCtrl->SendCommandPacket(6);
-
-			if (ret == 6) {
-				if (pCtrl->GetImage(m_image) == 0 ) {
-					m_isFull = true;
-				} else {
-					TRACE(TEXT("获取图片失败！\r\n"));
-				}
-			} else {
-				Sleep(10);
-			}
-		} else {
-			Sleep(10);
-		}
-	}
-}
-
-
-void CRemoteClientDlg::threadEntryForDownFile(void* arg)
-{
-	CRemoteClientDlg* m_this = (CRemoteClientDlg*)arg;
-	m_this->threadDownFile();
-	_endthread();
-}
-
-void CRemoteClientDlg::threadDownFile()
-{
-	int     nListSelected = m_List.GetSelectionMark();
-	CString cStrPath      = m_List.GetItemText(nListSelected, 0);
-
-	CFileDialog dlg(FALSE, (LPCTSTR)TEXT("*"), m_List.GetItemText(nListSelected, 0), OFN_OVERWRITEPROMPT,
-	                (LPCTSTR)TEXT(""), this, 0, true);
-
-
-	if (dlg.DoModal() == IDOK) {
-		HTREEITEM hSelected = m_Tree.GetSelectedItem();
-		cStrPath            = GetPath(hSelected) + cStrPath;
-		TRACE("%s\r\n", cStrPath);
-		USES_CONVERSION;
-		std::string strPath(W2A(cStrPath));
-
-		FILE* pFile = fopen(W2A(dlg.GetPathName()), "wb+");
-		if (pFile == NULL) {
-			AfxMessageBox(TEXT("本地无权限,文件无法创建"));
-			m_dlgStatus.ShowWindow(SW_HIDE);
-			EndWaitCursor();
-			return;
-		}
-
-		int ret = CClientController::getInstance()->SendCommandPacket(4, false, (BYTE*)strPath.c_str(), strPath.size());
-		
-		if (ret < 0) {
-			AfxMessageBox(TEXT("执行下载命令失败!!!"));
-			TRACE("执行下载命令失败  %d\r\n", ret);
-			m_dlgStatus.ShowWindow(SW_HIDE);
-			EndWaitCursor();
-			return;
-		}
-		CClientSocket* pClient = CClientSocket::getInstance();
-		long long      nLength = *(long long*)pClient->GetPacket().strData.c_str();
-		if (nLength == 0) {
-			AfxMessageBox(TEXT("文件长度为0,或无法读取"));
-			pClient->CloseSocket();
-			m_dlgStatus.ShowWindow(SW_HIDE);
-			EndWaitCursor();
-			return;
-		}
-		long long nCount = 0;
-
-		while (nCount < nLength) {
-			ret = pClient->DealCommand();
-			if (ret < 0) {
-				AfxMessageBox(TEXT("传输失败!!!"));
-				TRACE("传输失败  %d\r\n", ret);
-				pClient->CloseSocket();
-				m_dlgStatus.ShowWindow(SW_HIDE);
-				EndWaitCursor();
-				return;
-			}
-			fwrite(pClient->GetPacket().strData.c_str(), 1, pClient->GetPacket().strData.size(), pFile);
-			nCount += pClient->GetPacket().strData.size();
-		}
-		fclose(pFile);
-		pClient->CloseSocket();
-	}
-
-	m_dlgStatus.ShowWindow(SW_HIDE);
-	EndWaitCursor();
-	AfxMessageBox(TEXT("传输完成"));
-
-	return;
-}
 
 void CRemoteClientDlg::LoadFileCurrent()
 {
@@ -335,9 +221,6 @@ BOOL CRemoteClientDlg::OnInitDialog()
 	m_dlgStatus.ShowWindow(SW_HIDE);
 	m_isFull = false;
 
-	dlg.Create(IDD_DLG_WATCH);
-
-
 	return TRUE; // 除非将焦点设置到控件，否则返回 TRUE
 }
 
@@ -487,17 +370,23 @@ void CRemoteClientDlg::OnNMRClickListFile(NMHDR* pNMHDR, LRESULT* pResult)
 
 void CRemoteClientDlg::OnDownloadFile()
 {
+	int     nListSelected = m_List.GetSelectionMark();
+	CString cStrPath = m_List.GetItemText(nListSelected, 0);
+
+	HTREEITEM hSelected = m_Tree.GetSelectedItem();
+	cStrPath = GetPath(hSelected) + cStrPath;
 	//添加线程函数
-	_beginthread(CRemoteClientDlg::threadEntryForDownFile, 0, this);
-	Sleep(50);
-	BeginWaitCursor();
-	m_dlgStatus.m_info.SetWindowTextW(TEXT("命令执行中"));
-	m_dlgStatus.ShowWindow(SW_SHOW);
-	m_dlgStatus.CenterWindow(this);
-	m_dlgStatus.SetActiveWindow();
+	int ret = CClientController::getInstance()->DownFile(cStrPath);
+	if (ret != 0)
+	{
+		MessageBox(L"下载失败");
+		TRACE("下载失败 ret = %d\r\n", ret);
+	}
+
+	
+	
 
 
-	//TODO:大文件传输用额外的线程处理
 }
 
 void CRemoteClientDlg::OnDeleteFile()
@@ -561,38 +450,9 @@ LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wparam, LPARAM lparam)
 }
 
 
-void CRemoteClientDlg::OnBnClickedBtnStartWatch() //TODO:此处可能会造成内存泄漏
+void CRemoteClientDlg::OnBnClickedBtnStartWatch() 
 {
-	m_isClosed = false;
-	// static int flag = 0;
-	/*if (flag == 0) {
-		flag = 1;
-
-		//m_isClosed     = false;
-		int    ret = dlg.ShowWindow(SW_SHOWNORMAL);
-		HANDLE hThread = (HANDLE)_beginthread(CRemoteClientDlg::threadEntryForWatch, 0, this);
-		WaitForSingleObject(hThread, 500);
-	} else {
-		dlg.ShowWindow(SW_SHOWNORMAL);
-	}*/
-
-
-	int    ret     = dlg.ShowWindow(SW_SHOWNORMAL);
-	HANDLE hThread = (HANDLE)_beginthread(CRemoteClientDlg::threadEntryForWatch, 0, this);
-	WaitForSingleObject(hThread, 500);
-
-
-	/*m_isClosed = false;
-	CWatchDialog dlg(this);
-	HANDLE hThread = (HANDLE)_beginthread(CRemoteClientDlg::threadEntryForWatch, 0, this);
-	dlg.DoModal();
-	m_isClosed = true;
-	WaitForSingleObject(hThread, 500);*/
-
-
-	// dlg.ShowWindow(SW_SHOWNORMAL);
-	// GetDlgItem(IDC_BTN_START_WATCH)->EnableWindow(FALSE);
-	//dlg.DoModal();
+	CClientController::getInstance()->StartWathScreen();
 }
 
 
