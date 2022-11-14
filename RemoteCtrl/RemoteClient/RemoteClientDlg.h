@@ -8,8 +8,6 @@
 #include "WatchDialog.h"
 
 
-#define WM_SEND_PACKET (WM_USER+1)  //自定义消息   发送数据包消息
-
 // CRemoteClientDlg 对话框
 class CRemoteClientDlg : public CDialogEx
 {
@@ -27,7 +25,7 @@ protected:
 
 public:
 	CImage m_image; //缓存
-	bool m_isFull; //缓存是否有数据，true有，false无
+	//bool m_isFull; //缓存是否有数据，true有，false无
 	
 private:
 
@@ -59,7 +57,7 @@ public:
 	afx_msg void OnDownloadFile();
 	afx_msg void OnDeleteFile();
 	afx_msg void OnRunFile();
-	afx_msg LRESULT OnSendPacket(WPARAM wparam, LPARAM lparam);  //自定义消息响应函数
+
 	afx_msg void OnBnClickedBtnStartWatch();
 	//afx_msg void OnTimer(UINT_PTR nIDEvent);
 	afx_msg void OnBnClickedBtnLock();

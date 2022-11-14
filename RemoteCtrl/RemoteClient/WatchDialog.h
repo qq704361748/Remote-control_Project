@@ -23,7 +23,7 @@ protected:
 
 	DECLARE_MESSAGE_MAP()
 public:
-
+	bool m_isFull; //缓存是否有数据，true有，false无
 	int m_nObjWidth = -1;
 	int m_nObjHeight = -1;
 	CPoint UserPoint2RemoteScreenPoint(CPoint& point,bool isScreen = false);

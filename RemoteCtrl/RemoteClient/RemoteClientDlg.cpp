@@ -169,7 +169,7 @@ BEGIN_MESSAGE_MAP(CRemoteClientDlg, CDialogEx)
 	ON_BN_CLICKED(ID_DOWNLOAD_FILE, &CRemoteClientDlg::OnDownloadFile)
 	ON_BN_CLICKED(ID_DELETE_FILE, &CRemoteClientDlg::OnDeleteFile)
 	ON_BN_CLICKED(ID_RUN_FILE, &CRemoteClientDlg::OnRunFile)
-	ON_MESSAGE(WM_SEND_PACKET, &CRemoteClientDlg::OnSendPacket)
+	
 	ON_BN_CLICKED(IDC_BTN_START_WATCH, &CRemoteClientDlg::OnBnClickedBtnStartWatch)
 	ON_WM_TIMER()
 	ON_BN_CLICKED(IDC_BTN_LOCK, &CRemoteClientDlg::OnBnClickedBtnLock)
@@ -212,14 +212,15 @@ BOOL CRemoteClientDlg::OnInitDialog()
 	UpdateData();
 	m_server_address = 0xC0A85F8B; // 0x7F000001
 	m_nPort          = TEXT("9527");
-	UpdateData();
+	UpdateData(FALSE);
+
 	CClientController* pController = CClientController::getInstance();
 	pController->UpdateAddress(m_server_address, _ttoi(m_nPort));
 
-	UpdateData(FALSE);
+	
 	m_dlgStatus.Create(IDD_DLG_STATUS, this);
 	m_dlgStatus.ShowWindow(SW_HIDE);
-	m_isFull = false;
+	
 
 	return TRUE; // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -382,11 +383,6 @@ void CRemoteClientDlg::OnDownloadFile()
 		MessageBox(L"下载失败");
 		TRACE("下载失败 ret = %d\r\n", ret);
 	}
-
-	
-	
-
-
 }
 
 void CRemoteClientDlg::OnDeleteFile()
@@ -422,33 +418,6 @@ void CRemoteClientDlg::OnRunFile()
 	}
 }
 
-LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wparam, LPARAM lparam)
-{
-	int cmd = wparam >> 1;
-	int ret = 0;
-
-	switch (cmd) {
-	case 4:
-		ret = CClientController::getInstance()->SendCommandPacket(wparam >> 1, wparam & 1, (BYTE*)std::string((LPCSTR)lparam).c_str(),
-		                        std::string((LPCSTR)lparam).size());
-		break;
-	case 5: //鼠标操作
-		ret = CClientController::getInstance()->SendCommandPacket(cmd, wparam & 1, (BYTE*)lparam, sizeof(MOUSEEVENT));
-		break;
-	case 6:
-	// ret = SendCommandPacket(cmd, wparam & 1);
-	// break;
-	case 7: ret = CClientController::getInstance()->SendCommandPacket(wparam >> 1, wparam & 1);
-		break;
-	case 8:
-		ret = CClientController::getInstance()->SendCommandPacket(wparam >> 1, wparam & 1);
-		break;
-	default:
-		ret = -1;
-	}
-	return ret;
-}
-
 
 void CRemoteClientDlg::OnBnClickedBtnStartWatch() 
 {
@@ -458,13 +427,13 @@ void CRemoteClientDlg::OnBnClickedBtnStartWatch()
 
 void CRemoteClientDlg::OnBnClickedBtnLock()
 {
-	SendMessage(WM_SEND_PACKET, 7 << 1 | 1);
+	CClientController::getInstance()->SendCommandPacket(7);
 }
 
 
 void CRemoteClientDlg::OnBnClickedBtnUnlock()
 {
-	SendMessage(WM_SEND_PACKET, 8 << 1 | 1);
+	CClientController::getInstance()->SendCommandPacket(8);
 }
 
 

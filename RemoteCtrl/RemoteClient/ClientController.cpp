@@ -17,7 +17,7 @@ CClientController* CClientController::getInstance()
 			UINT    nMsg;
 			MSGFUNC func;
 		}           MsgFuncs[] = {
-					{WM_SEND_PACKET, &CClientController::OnSendPack},
+					{WM_SEND_PACK, &CClientController::OnSendPack},
 					{WM_SEND_DATA, &CClientController::OnSendData},
 					{WM_SHOW_STATUS, &CClientController::OnShowStatus},
 					{WM_SHOW_WATCH, &CClientController::OnShowWatch},
@@ -134,9 +134,8 @@ void CClientController::StartWathScreen()
 {
 	m_isClosed = false;
 	
-	CWatchDialog dlg(&m_remoteDlg);
 	m_hThreadWatch = (HANDLE)_beginthread(&CClientController::threadWatchScreen, 0, this);
-	int    ret = dlg.ShowWindow(SW_SHOWNORMAL);
+	int    ret = m_watchDlg.ShowWindow(SW_SHOWNORMAL);
 	WaitForSingleObject(m_hThreadWatch, 500);
 
 }
@@ -240,12 +239,12 @@ void CClientController::threadWatchScreen()
 	while (!m_isClosed) //等价于  while(true)
 	{
 		
-		if (m_remoteDlg.m_isFull == false) {
+		if (m_watchDlg.m_isFull == false) {
 			int ret = SendCommandPacket(6);
 
 			if (ret == 6) {
 				if (GetImage(m_remoteDlg.m_image) == 0) {
-					m_remoteDlg.m_isFull = true;
+					m_watchDlg.m_isFull = true;
 				}
 				else {
 					TRACE(TEXT("获取图片失败！\r\n"));
@@ -325,7 +324,7 @@ unsigned CClientController::threadEntry(void* arg)
 
 CClientController::CHelper::CHelper()
 {
-	CClientController::getInstance();
+	//CClientController::getInstance();
 }
 
 CClientController::CHelper::~CHelper()
