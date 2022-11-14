@@ -134,23 +134,27 @@ int CCommand::RunFile(std::list<CPacket>& lstPacket, CPacket& inPacket)
 
 int CCommand::DownloadFile(std::list<CPacket>& lstPacket, CPacket& inPacket)
 {
-	std::string strPath = inPacket.strData;
+	USES_CONVERSION;
+	std::string strPath =(inPacket.strData);
 	long long   data    = 0;
 	FILE*       pFile;
+
+
 	fopen_s(&pFile, strPath.c_str(), "rb");
 	if (pFile == NULL) {
 		lstPacket.push_back(CPacket(4, (BYTE*)&data, 8));
+		
 		return -1;
 	}
 
 	if (pFile != NULL) {
 
-
 		fseek(pFile, 0, SEEK_END);
-
 		data = _ftelli64(pFile);
-		lstPacket.push_back(CPacket(4, (BYTE*)&data, 8));
+
+
 		fseek(pFile, 0, SEEK_SET);
+		lstPacket.push_back(CPacket(4, (BYTE*)&data, 8));
 
 		char   buffer[1024] = {0};
 		size_t rlen         = 0;

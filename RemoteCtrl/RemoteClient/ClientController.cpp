@@ -104,7 +104,7 @@ int CClientController::GetImage(CImage& image)
 
 int CClientController::DownFile(CString strPath)
 {
-
+	
 	CFileDialog dlg(FALSE, (LPCTSTR)TEXT("*"), strPath, OFN_OVERWRITEPROMPT,
 		(LPCTSTR)TEXT(""), &m_remoteDlg, 0, true);
 
@@ -112,7 +112,7 @@ int CClientController::DownFile(CString strPath)
 
 		m_strRemote = strPath;
 		m_strLocal = dlg.GetPathName();
-
+		
 		m_hThreadDownload = (HANDLE)_beginthread(&CClientController::threadDownloadEntry, 0, this);
 
 		if (WaitForSingleObject(m_hThreadDownload, 0) != WAIT_TIMEOUT)
@@ -178,7 +178,8 @@ LRESULT CClientController::OnShowWatch(UINT nMsg, WPARAM wParam, LPARAM lParam)
 
 void CClientController::threadDownloadFile()
 {
-	FILE* pFile = fopen(CW2A(m_strLocal), "wb+");
+	USES_CONVERSION;
+	FILE* pFile = fopen(W2A(m_strLocal), "wb+");
 	if (pFile == NULL)
 	{
 		AfxMessageBox(TEXT("本地无权限,文件无法创建"));
@@ -188,9 +189,11 @@ void CClientController::threadDownloadFile()
 	}
 	CClientSocket* pClient = CClientSocket::getInstance();
 
+	string c_m_strRemote(W2A(m_strRemote));  //宽字符转窄字符
+
 	do
 	{
-		int ret = SendCommandPacket(4, false, (BYTE*)(LPCTSTR)m_strRemote, m_strRemote.GetLength());
+		int ret = SendCommandPacket(4, false, (BYTE*)c_m_strRemote.c_str(), c_m_strRemote.size());
 
 		long long nLength = *(long long*)pClient->GetPacket().strData.c_str();
 		if (nLength == 0)

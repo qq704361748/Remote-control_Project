@@ -129,31 +129,41 @@ void CRemoteClientDlg::LoadFileInfo()
 	USES_CONVERSION;
 	string         str(W2A(strPath));
 
-	list<CPacket> lstPacks;
-	int nCmd = CClientController::getInstance()->SendCommandPacket( 2, false, (BYTE*)str.c_str(), str.length());
-	if (lstPacks.size() > 0)
-	{
-		std::list<CPacket>::iterator it = lstPacks.begin();
-		for (; it != lstPacks.end(); it++)
-		{
-			PFILEINFO pInfo = (PFILEINFO)(*it).strData.c_str();
-			if (pInfo->HasNext == false)continue;
-
-			if (pInfo->IsDirectory)
-			{
-				if (CStringW(pInfo->szFileName) == L"." || CStringW(pInfo->szFileName) == L"..")
-				{
-					continue;
+	int            ncmd = CClientController::getInstance()->SendCommandPacket(2, false, (BYTE*)str.c_str(), str.length());
+	PFILEINFO      pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();
+	CClientSocket* pClient = CClientSocket::getInstance();
+	int count = 0;
+	while (pInfo->HasNext) {
+		TRACE("Name [%s] isdir %d\r\n", pInfo->szFileName, pInfo->IsDirectory);
+		if (pInfo->IsDirectory) {
+			if (CStringW(pInfo->szFileName) == L"." || CStringW(pInfo->szFileName) == L"..") {
+				int cmd = pClient->DealCommand();
+				TRACE("ACK: %d\r\n", cmd);
+				if (cmd < 0) {
+					break;
 				}
-				HTREEITEM hTemp = m_Tree.InsertItem(CStringW(pInfo->szFileName), hTreeSelectded, TVI_LAST);
-				m_Tree.InsertItem(NULL, hTemp, TVI_LAST);
+				pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();
+				continue;
 			}
-			else
-			{
-				m_List.InsertItem(0, CStringW(pInfo->szFileName));
-			}
+			HTREEITEM hTemp = m_Tree.InsertItem(CStringW(pInfo->szFileName), hTreeSelectded, TVI_LAST);
+			m_Tree.InsertItem(NULL, hTemp, TVI_LAST);
 		}
+		else {
+			m_List.InsertItem(0, CStringW(pInfo->szFileName));
+		}
+
+		int cmd = pClient->DealCommand();
+		TRACE("ACK: %d\r\n", cmd);
+		if (cmd < 0) {
+			break;
+		}
+		pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();
+		count++;
 	}
+	TRACE("接收到: %d", count);
+
+	pClient->CloseSocket();
+
 }
 
 
@@ -376,6 +386,7 @@ void CRemoteClientDlg::OnDownloadFile()
 
 	HTREEITEM hSelected = m_Tree.GetSelectedItem();
 	cStrPath = GetPath(hSelected) + cStrPath;
+	
 	//添加线程函数
 	int ret = CClientController::getInstance()->DownFile(cStrPath);
 	if (ret != 0)
