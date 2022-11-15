@@ -156,10 +156,34 @@ void CClientSocket::CloseSocket()
 void CClientSocket::UpdateAddress(int nIP, int nPort)
 {
 	if (m_nIP != nIP || m_nPort != nPort)
-	{
+	
 		m_nIP = nIP;
 		m_nPort = nPort;
 	}
+	
+
+bool CClientSocket::SendPacket(const CPacket& pack, std::list<CPacket>& lstPacks)
+{
+	if (m_sock == INVALID_SOCKET) {
+
+		if(InitSocket() ==false) return false;
+
+		_beginthread(&CClientSocket::threadEntry, 0, this);
+	}
+
+	m_lstSend.push_back(pack);
+	WaitForSingleObject(pack.hEvent, INFINITE);
+	std::map < HANDLE, std::list < CPacket >>::iterator it;
+	it = m_mapAck.find(pack.hEvent);
+	if (it!=m_mapAck.end()) {
+		std::list<CPacket>::iterator i;
+		for (i = it->second.begin();i!= it->second.end();i++) {
+			lstPacks.push_back(*i);
+		}
+		m_mapAck.erase(it);
+		return true;
+	}
+	return false;
 }
 
 
@@ -172,15 +196,14 @@ void CClientSocket::threadEntry(void* arg)
 
 void CClientSocket::threadFunc()
 {
-	if(InitSocket() == false) {
-		return;
-	}
+	
 	std::string strBuffer;
 	strBuffer.resize(BUFFER_SIZE);
 	char* pBuffer = (char*)strBuffer.c_str();
 	int index = 0;
 	while (m_sock != INVALID_SOCKET) {
 		if (m_lstSend.size()> 0) {
+			TRACE("m_lstSend.size : %d\r\n", m_lstSend.size());
 			CPacket& head = m_lstSend.front();
 			if(Send(head) == false) {
 				TRACE("发送失败！\r\n");
@@ -212,6 +235,7 @@ void CClientSocket::threadFunc()
 			m_lstSend.pop_front();
 		}
 	}
+	CloseSocket();
 }
 
 
@@ -226,7 +250,7 @@ CClientSocket::CClientSocket(const CClientSocket& ss)
 	m_nPort = ss.m_nPort;
 }
 
-CClientSocket::CClientSocket():m_nIP(INADDR_ANY), m_nPort(0)
+CClientSocket::CClientSocket():m_nIP(INADDR_ANY), m_nPort(0),m_sock(INVALID_SOCKET)
 {
 	//m_sock = INVALID_SOCKET;
 	if (InitSockEnv() == FALSE) {
@@ -235,6 +259,9 @@ CClientSocket::CClientSocket():m_nIP(INADDR_ANY), m_nPort(0)
 		exit(0);
 	}
 	m_buffer.resize(BUFFER_SIZE);
+
+	
+
 }
 
 CClientSocket::~CClientSocket()

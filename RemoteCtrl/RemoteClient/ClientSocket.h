@@ -14,13 +14,13 @@ using namespace std;
 class CPacket
 {
 public:
-	CPacket();                                           //默认构造
-	CPacket(WORD nCmd, const BYTE* pData, size_t nSize,HANDLE hEvent); //封包
-	CPacket(const BYTE* pData, size_t& nSize);           //解包
-	CPacket(const CPacket& pack);                        //拷贝构造
-	CPacket& operator=(const CPacket& pack);             //赋值构造
+	CPacket();                                                          //默认构造
+	CPacket(WORD nCmd, const BYTE* pData, size_t nSize, HANDLE hEvent); //封包
+	CPacket(const BYTE* pData, size_t& nSize);                          //解包
+	CPacket(const CPacket& pack);                                       //拷贝构造
+	CPacket& operator=(const CPacket& pack);                            //赋值构造
 
-	int         Size(); //获取包数据大小
+	int         Size();                          //获取包数据大小
 	const char* Data(std::string& strOut) const; //获取包数据
 
 	~CPacket() = default;
@@ -49,9 +49,9 @@ typedef struct file_info
 {
 	file_info()
 	{
-		IsInvalid = FALSE;
+		IsInvalid   = FALSE;
 		IsDirectory = -1;
-		HasNext = TRUE;
+		HasNext     = TRUE;
 		memset(szFileName, 0, sizeof(szFileName));
 	}
 
@@ -59,7 +59,7 @@ typedef struct file_info
 	BOOL IsDirectory; //是否为目录 0否，1是
 	BOOL HasNext;     //是否还有后续 0没有，1有
 	char szFileName[256];
-}        FILEINFO, * PFILEINFO;
+}        FILEINFO, *PFILEINFO;
 
 
 string GetErrorInfo(int wsaErrCode);
@@ -67,22 +67,23 @@ string GetErrorInfo(int wsaErrCode);
 class CClientSocket //服务端Socket类 （用于初始化和结束时销毁  单例）
 {
 public:
-	static CClientSocket* getInstance();                          //得到一个CClientSocket单例
-	bool                  InitSocket(); //配置Socket（绑定、监听）
-	int                   DealCommand();                          //处理接收到的消息
-	bool                  Send(const char* pData, int nSize);     //发送消息
-	bool                  Send(const CPacket& pack);                    //发送数据
-	bool                  GetFilePath(std::string& strPath);      //获取文件路径
-	bool                  GetMouseEvent(MOUSEEVENT& mouse);
-	CPacket&              GetPacket();
-	void                  CloseSocket();
+	static CClientSocket* getInstance(); //得到一个CClientSocket单例
+	bool                  InitSocket();  //配置Socket（绑定、监听）
+	int                   DealCommand(); //处理接收到的消息
+
+	bool     GetFilePath(std::string& strPath); //获取文件路径
+	bool     GetMouseEvent(MOUSEEVENT& mouse);
+	CPacket& GetPacket();
+	void     CloseSocket();
 
 	void UpdateAddress(int nIP, int nPort);
 
-private:
-	std::list<CPacket> m_lstSend;
-	std::map<HANDLE, list<CPacket>> m_mapAck;
+	bool SendPacket(const CPacket& pack,std::list<CPacket>& lstPacks);
 
+
+private:
+	std::list<CPacket>              m_lstSend;
+	std::map<HANDLE, list<CPacket>> m_mapAck;
 
 
 	int m_nIP;
@@ -95,9 +96,10 @@ private:
 
 
 	static void threadEntry(void* arg);
-	void threadFunc();
+	void        threadFunc();
 
-
+	bool Send(const char* pData, int nSize); //发送消息
+	bool Send(const CPacket& pack);          //发送数据
 
 	CClientSocket& operator=(const CClientSocket& ss) = delete; //禁用赋值构造 实现单例
 	CClientSocket(const CClientSocket& ss);                     //拷贝构造 实现单例

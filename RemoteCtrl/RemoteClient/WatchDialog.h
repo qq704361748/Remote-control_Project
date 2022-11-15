@@ -23,6 +23,7 @@ protected:
 
 	DECLARE_MESSAGE_MAP()
 public:
+	CImage m_image; //缓存
 	bool m_isFull; //缓存是否有数据，true有，false无
 	int m_nObjWidth = -1;
 	int m_nObjHeight = -1;

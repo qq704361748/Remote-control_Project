@@ -75,8 +75,6 @@ BOOL CWatchDialog::OnInitDialog()
 
 void CWatchDialog::OnTimer(UINT_PTR nIDEvent)
 {
-	
-	
 	// TODO: 在此添加消息处理程序代码和/或调用默认值
 	if (nIDEvent == 0) {
 		
@@ -84,24 +82,22 @@ void CWatchDialog::OnTimer(UINT_PTR nIDEvent)
 		if (m_isFull) {
 
 			SetStretchBltMode(m_picture.GetDC()->GetSafeHdc(), HALFTONE); 
-			CImage image;
-			pCtrl->GetImage(image);
 
-			if (m_nObjWidth == -1)m_nObjWidth = image.GetWidth();
-			if (m_nObjHeight == -1)m_nObjHeight = image.GetHeight();
+			if (m_nObjWidth == -1)m_nObjWidth = m_image.GetWidth();
+			if (m_nObjHeight == -1)m_nObjHeight = m_image.GetHeight();
 
-			int x = image.GetWidth() * 4 /5;
-			int y = image.GetHeight() * 4 / 5;
+			int x = m_image.GetWidth() * 4 /5;
+			int y = m_image.GetHeight() * 4 / 5;
 
 			SetWindowPos(NULL, 0, 0, x+16, y+38, SWP_NOMOVE);  // +标题栏像素
 
 			m_picture.SetWindowPos(NULL, 0, 0,x,y, SWP_NOMOVE);
 
 
-			image.StretchBlt(m_picture.GetDC()->GetSafeHdc(), 0, 0, x, y, SRCCOPY);
+			m_image.StretchBlt(m_picture.GetDC()->GetSafeHdc(), 0, 0, x, y, SRCCOPY);
 
 			m_picture.InvalidateRect(NULL);
-			image.Destroy();
+			m_image.Destroy();
 			m_isFull = false;
 		} else { }
 	}
