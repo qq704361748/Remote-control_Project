@@ -1,9 +1,10 @@
 #pragma once
 #include "pch.h"
 
+#include <list>
 #include <string>
 #include <vector>
-
+#include <map>
 #include "framework.h"
 
 #pragma pack(push)
@@ -14,7 +15,7 @@ class CPacket
 {
 public:
 	CPacket();                                           //默认构造
-	CPacket(WORD nCmd, const BYTE* pData, size_t nSize); //封包
+	CPacket(WORD nCmd, const BYTE* pData, size_t nSize,HANDLE hEvent); //封包
 	CPacket(const BYTE* pData, size_t& nSize);           //解包
 	CPacket(const CPacket& pack);                        //拷贝构造
 	CPacket& operator=(const CPacket& pack);             //赋值构造
@@ -30,6 +31,7 @@ public:
 	std::string strData; //数据
 	WORD        sSum;    //和校验
 	//std::string strOut;  //整个包的数据
+	HANDLE hEvent;
 };
 
 #pragma pack(pop)
@@ -78,6 +80,11 @@ public:
 	void UpdateAddress(int nIP, int nPort);
 
 private:
+	std::list<CPacket> m_lstSend;
+	std::map<HANDLE, list<CPacket>> m_mapAck;
+
+
+
 	int m_nIP;
 	int m_nPort;
 
@@ -85,6 +92,12 @@ private:
 	vector<char> m_buffer;
 	SOCKET       m_sock;
 	CPacket      m_packet;
+
+
+	static void threadEntry(void* arg);
+	void threadFunc();
+
+
 
 	CClientSocket& operator=(const CClientSocket& ss) = delete; //禁用赋值构造 实现单例
 	CClientSocket(const CClientSocket& ss);                     //拷贝构造 实现单例

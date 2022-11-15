@@ -163,6 +163,62 @@ void CClientSocket::UpdateAddress(int nIP, int nPort)
 }
 
 
+void CClientSocket::threadEntry(void* arg)
+{
+	auto* thiz = (CClientSocket*)arg;
+	thiz->threadFunc();
+
+}
+
+void CClientSocket::threadFunc()
+{
+	if(InitSocket() == false) {
+		return;
+	}
+	std::string strBuffer;
+	strBuffer.resize(BUFFER_SIZE);
+	char* pBuffer = (char*)strBuffer.c_str();
+	int index = 0;
+	while (m_sock != INVALID_SOCKET) {
+		if (m_lstSend.size()> 0) {
+			CPacket& head = m_lstSend.front();
+			if(Send(head) == false) {
+				TRACE("发送失败！\r\n");
+				continue;
+			}
+
+			auto pr = m_mapAck.insert(std::pair<HANDLE, std::list<CPacket>>(head.hEvent, std::list<CPacket>()));
+
+			std::list<CPacket> lstRecv;
+
+			int length = recv(m_sock, pBuffer + index, BUFFER_SIZE - index, 0);
+			if (length > 0 || index > 0) {
+				index += length;
+				size_t size = (size_t)index;
+				CPacket pack((BYTE*)pBuffer, size);
+				pack.hEvent = head.hEvent;
+				
+				if (size > 0) {
+					//TODO:通知对应的函数进行响应
+					pack.hEvent = head.hEvent;
+					pr.first->second.push_back(pack);
+					SetEvent(head.hEvent);
+					
+				}
+			}
+			else if (length <= 0 && index <= 0) {
+				CloseSocket();
+			}
+			m_lstSend.pop_front();
+		}
+	}
+}
+
+
+
+
+
+
 CClientSocket::CClientSocket(const CClientSocket& ss)
 {
 	m_sock = ss.m_sock;
@@ -184,6 +240,7 @@ CClientSocket::CClientSocket():m_nIP(INADDR_ANY), m_nPort(0)
 CClientSocket::~CClientSocket()
 {
 	closesocket(m_sock);
+	m_sock = INVALID_SOCKET;
 	WSACleanup();
 }
 
@@ -218,7 +275,7 @@ CClientSocket::CHelper::~CHelper()
 
 CPacket::CPacket() : sHead(0), nLength(0), sCmd(0), sSum(0) {}
 
-CPacket::CPacket(WORD nCmd, const BYTE* pData, size_t nSize) //封包
+CPacket::CPacket(WORD nCmd, const BYTE* pData, size_t nSize,HANDLE hEvent) //封包
 {
 	sHead   = 0xFEFF;
 	nLength = nSize + 4;
@@ -234,9 +291,10 @@ CPacket::CPacket(WORD nCmd, const BYTE* pData, size_t nSize) //封包
 	for (size_t j = 0; j < strData.size(); ++j) {
 		sSum += BYTE(strData[j]) & 0xFF;
 	}
+	this->hEvent = hEvent;
 }
 
-CPacket::CPacket(const BYTE* pData, size_t& nSize) //解包
+CPacket::CPacket(const BYTE* pData, size_t& nSize):hEvent(INVALID_HANDLE_VALUE) //解包
 {
 	size_t i = 0;
 	for (; i < nSize; ++i) {
@@ -282,7 +340,6 @@ CPacket::CPacket(const BYTE* pData, size_t& nSize) //解包
 			return;
 		}
 		nSize = 0;
-	
 }
 
 
@@ -293,6 +350,7 @@ CPacket::CPacket(const CPacket& pack)
 	sCmd    = pack.sCmd;
 	strData = pack.strData;
 	sSum    = pack.sSum;
+	hEvent = pack.hEvent;
 }
 
 CPacket& CPacket::operator=(const CPacket& pack)
@@ -303,6 +361,7 @@ CPacket& CPacket::operator=(const CPacket& pack)
 		sCmd    = pack.sCmd;
 		strData = pack.strData;
 		sSum    = pack.sSum;
+		hEvent = pack.hEvent;
 	}
 	return *this;
 }

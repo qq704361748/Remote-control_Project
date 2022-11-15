@@ -85,7 +85,9 @@ int CClientController::SendCommandPacket(int nCmd , bool bAutoClose, BYTE* pData
 {
 	CClientSocket* pClient = CClientSocket::getInstance();
 	if (pClient->InitSocket() == false) return false;
-	pClient->Send(CPacket(nCmd,pData,nLength));
+
+	HANDLE hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+	pClient->Send(CPacket(nCmd,pData,nLength,hEvent));
 
 	int cmd = DealCommand();
 	TRACE("ACK:%d\r\n", cmd);
