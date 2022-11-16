@@ -80,7 +80,7 @@ void CWatchDialog::OnTimer(UINT_PTR nIDEvent)
 		
 		CClientController* pCtrl = CClientController::getInstance();
 		if (m_isFull) {
-
+			
 			SetStretchBltMode(m_picture.GetDC()->GetSafeHdc(), HALFTONE); 
 
 			if (m_nObjWidth == -1)m_nObjWidth = m_image.GetWidth();
@@ -99,6 +99,7 @@ void CWatchDialog::OnTimer(UINT_PTR nIDEvent)
 			m_picture.InvalidateRect(NULL);
 			m_image.Destroy();
 			m_isFull = false;
+			TRACE("更新图片完成！%d %d %08X\r\n", m_nObjWidth, m_nObjHeight,(HBITMAP)m_image);
 		} else { }
 	}
 	CDialog::OnTimer(nIDEvent);

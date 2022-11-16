@@ -162,7 +162,7 @@ void CRemoteClientDlg::LoadFileInfo()
 	}
 	TRACE("接收到: %d", count);
 
-	pClient->CloseSocket();
+	//pClient->CloseSocket();
 
 }
 

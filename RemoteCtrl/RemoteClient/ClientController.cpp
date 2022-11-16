@@ -83,6 +83,8 @@ void CClientController::CloseSocket()
 
 int CClientController::SendCommandPacket(int nCmd , bool bAutoClose, BYTE* pData, size_t nLength, std::list<CPacket>* plstPacks)
 {
+	TRACE("cmd: %d %s start %lld \r\n",nCmd, __FUNCTION__, GetTickCount64());
+
 	CClientSocket* pClient = CClientSocket::getInstance();
 	//if (pClient->InitSocket() == false) return false;
 
@@ -94,12 +96,15 @@ int CClientController::SendCommandPacket(int nCmd , bool bAutoClose, BYTE* pData
 	}
 	pClient->SendPacket(CPacket(nCmd,pData,nLength,hEvent),*plstPacks);
 
+	CloseHandle(hEvent);  //回收事件句柄，防止资源耗尽
+
 	if (plstPacks->size() > 0) {
+		TRACE("%s start %lld \r\n", __FUNCTION__, GetTickCount64());
 		TRACE("sCmd:%d\r\n", plstPacks->front().sCmd);
 		return plstPacks->front().sCmd;
 		
 	}
-	
+	TRACE("%s start %lld \r\n", __FUNCTION__, GetTickCount64());
 	return -1;
 
 }
