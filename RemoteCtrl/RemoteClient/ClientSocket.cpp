@@ -164,25 +164,28 @@ void CClientSocket::UpdateAddress(int nIP, int nPort)
 
 bool CClientSocket::SendPacket(const CPacket& pack, std::list<CPacket>& lstPacks,bool isAutoClose)
 {
-	if (m_sock == INVALID_SOCKET) {
+	if (m_sock == INVALID_SOCKET && m_hThread == INVALID_HANDLE_VALUE) {
 
 		// if(InitSocket() ==false) return false;
 
-		_beginthread(&CClientSocket::threadEntry, 0, this);
+		m_hThread=(HANDLE)_beginthread(&CClientSocket::threadEntry, 0, this);
 	}
+	m_lock.lock();
+
 	auto pr = m_mapAck.insert(std::pair<HANDLE, std::list<CPacket>&>(pack.hEvent, lstPacks));
-
 	m_mapAutoClosed.insert(std::pair<HANDLE, bool>(pack.hEvent, isAutoClose));
-
 	m_lstSend.push_back(pack);
+
+	m_lock.unlock();
 
 	WaitForSingleObject(pack.hEvent, INFINITE);
 	std::map < HANDLE, std::list < CPacket >&>::iterator it;
 	it = m_mapAck.find(pack.hEvent);
 	if (it!=m_mapAck.end()) {
 		
-
+		m_lock.lock();
 		m_mapAck.erase(it);
+		m_lock.unlock();
 		return true;
 	}
 	return false;
@@ -208,7 +211,9 @@ void CClientSocket::threadFunc()
 		if (m_lstSend.size()> 0) {
 			
 			TRACE("m_lstSend.size : %d\r\n", m_lstSend.size());
+			m_lock.lock();
 			CPacket& head = m_lstSend.front();
+			m_lock.unlock();
 			if(Send(head) == false) {
 				TRACE("发送失败！\r\n");
 				continue;
@@ -224,7 +229,7 @@ void CClientSocket::threadFunc()
 						index += length;
 						size_t size = (size_t)index;
 						CPacket pack((BYTE*)pBuffer, size);
-						pack.hEvent = head.hEvent;
+						
 
 						if (size > 0) {
 							//TODO:通知对应的函数进行响应
@@ -235,6 +240,7 @@ void CClientSocket::threadFunc()
 							index -= size;
 							if (it0->second) {
 								SetEvent(head.hEvent);
+								break;
 							}
 						}
 					}
@@ -244,16 +250,19 @@ void CClientSocket::threadFunc()
 						m_mapAutoClosed.erase(it0);
 						break;
 					}
-				} while (it0->second == false);
+				} while (it0->second == false  );
 			}
 			
 
 			//std::list<CPacket> lstRecv;
-
+			m_lock.lock();
 			m_lstSend.pop_front();
+			m_lock.unlock();
 			if(InitSocket() == false) {
 				InitSocket();
 			}
+		} else {
+			Sleep(1);
 		}
 	}
 	CloseSocket();
@@ -272,7 +281,7 @@ CClientSocket::CClientSocket(const CClientSocket& ss)
 	m_nPort = ss.m_nPort;
 }
 
-CClientSocket::CClientSocket():m_nIP(INADDR_ANY), m_nPort(0),m_sock(INVALID_SOCKET), m_bAutoClose(true)
+CClientSocket::CClientSocket():m_nIP(INADDR_ANY), m_nPort(0),m_sock(INVALID_SOCKET), m_bAutoClose(true),m_hThread(INVALID_HANDLE_VALUE)
 {
 	//m_sock = INVALID_SOCKET;
 	if (InitSockEnv() == FALSE) {

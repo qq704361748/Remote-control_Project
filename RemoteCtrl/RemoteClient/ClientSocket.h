@@ -6,6 +6,8 @@
 #include <vector>
 #include <map>
 #include "framework.h"
+#include <mutex>
+
 
 #pragma pack(push)
 #pragma pack(1)
@@ -82,6 +84,11 @@ public:
 
 
 private:
+	HANDLE m_hThread;
+	std::mutex m_lock;
+
+
+
 	std::map<HANDLE, bool> m_mapAutoClosed;
 	bool m_bAutoClose;
 	std::list<CPacket>              m_lstSend;
