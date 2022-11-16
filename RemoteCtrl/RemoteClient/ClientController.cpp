@@ -94,7 +94,7 @@ int CClientController::SendCommandPacket(int nCmd , bool bAutoClose, BYTE* pData
 	if (plstPacks == NULL) {
 		plstPacks = &lstPacks;
 	}
-	pClient->SendPacket(CPacket(nCmd,pData,nLength,hEvent),*plstPacks);
+	pClient->SendPacket(CPacket(nCmd,pData,nLength,hEvent),*plstPacks,bAutoClose);
 
 	CloseHandle(hEvent);  //回收事件句柄，防止资源耗尽
 

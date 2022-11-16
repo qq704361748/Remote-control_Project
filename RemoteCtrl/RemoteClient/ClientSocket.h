@@ -85,7 +85,7 @@ private:
 	std::map<HANDLE, bool> m_mapAutoClosed;
 	bool m_bAutoClose;
 	std::list<CPacket>              m_lstSend;
-	std::map<HANDLE, list<CPacket>> m_mapAck;
+	std::map<HANDLE, list<CPacket>&> m_mapAck;
 
 
 	int m_nIP;

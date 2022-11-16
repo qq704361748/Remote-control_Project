@@ -84,17 +84,17 @@ void CRemoteClientDlg::LoadFileCurrent()
 	while (pInfo->HasNext) {
 		TRACE("[%s] sidir  %d \r\n", pInfo->szFileName, pInfo->IsDirectory);
 		if (pInfo->IsDirectory) {
-			if (CStringW(pInfo->szFileName) == L"." || CStringW(pInfo->szFileName) == L"..") {
+			if (CString(pInfo->szFileName) == L"." || CString(pInfo->szFileName) == L"..") {
 				int cmd = CClientController::getInstance()->DealCommand();
 				TRACE("ack:%d\r\n", cmd);
 				if (cmd < 0) { break; }
 				pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();
 				continue;
 			}
-			HTREEITEM hTemp = m_Tree.InsertItem(CStringW(pInfo->szFileName), hTreeSelected, TVI_LAST);
+			HTREEITEM hTemp = m_Tree.InsertItem(CString(pInfo->szFileName), hTreeSelected, TVI_LAST);
 			m_Tree.InsertItem(NULL, hTemp, TVI_LAST);
 		} else {
-			m_List.InsertItem(0, CStringW(pInfo->szFileName));
+			m_List.InsertItem(0, CString(pInfo->szFileName));
 		}
 
 		int cmd = CClientController::getInstance()->DealCommand();
@@ -126,43 +126,36 @@ void CRemoteClientDlg::LoadFileInfo()
 	m_List.DeleteAllItems();
 
 	CString strPath = GetPath(hTreeSelectded);
+
 	USES_CONVERSION;
 	string         str(W2A(strPath));
 
-	int            ncmd = CClientController::getInstance()->SendCommandPacket(2, false, (BYTE*)str.c_str(), str.length());
-	PFILEINFO      pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();
-	CClientSocket* pClient = CClientSocket::getInstance();
-	int count = 0;
-	while (pInfo->HasNext) {
-		TRACE("Name [%s] isdir %d\r\n", pInfo->szFileName, pInfo->IsDirectory);
-		if (pInfo->IsDirectory) {
-			if (CStringW(pInfo->szFileName) == L"." || CStringW(pInfo->szFileName) == L"..") {
-				int cmd = pClient->DealCommand();
-				TRACE("ACK: %d\r\n", cmd);
-				if (cmd < 0) {
-					break;
+	std::list<CPacket> lstPacks;
+	int            ncmd = CClientController::getInstance()->SendCommandPacket(2, false, (BYTE*)str.c_str(), str.length(),&lstPacks);
+	//int            ncmd = CClientController::getInstance()->SendCommandPacket(2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength(),&lstPacks);
+	if (lstPacks.size() >0) {
+		std::list<CPacket>::iterator it = lstPacks.begin();
+		for (; it != lstPacks.end(); it++)
+		{
+			PFILEINFO pInfo = (PFILEINFO)(*it).strData.c_str();
+			if (pInfo->HasNext == false)continue;
+
+			if (pInfo->IsDirectory)
+			{
+				if (CString(pInfo->szFileName) == TEXT(".") || CString(pInfo->szFileName) == TEXT(".."))
+				{
+					continue;
 				}
-				pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();
-				continue;
+				HTREEITEM hTemp = m_Tree.InsertItem(CString(pInfo->szFileName), hTreeSelectded, TVI_LAST);
+				m_Tree.InsertItem(NULL, hTemp, TVI_LAST);
 			}
-			HTREEITEM hTemp = m_Tree.InsertItem(CStringW(pInfo->szFileName), hTreeSelectded, TVI_LAST);
-			m_Tree.InsertItem(NULL, hTemp, TVI_LAST);
+			else
+			{
+				m_List.InsertItem(0, CString(pInfo->szFileName));
+			}
 		}
-		else {
-			m_List.InsertItem(0, CStringW(pInfo->szFileName));
-		}
-
-		int cmd = pClient->DealCommand();
-		TRACE("ACK: %d\r\n", cmd);
-		if (cmd < 0) {
-			break;
-		}
-		pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();
-		count++;
 	}
-	TRACE("接收到: %d", count);
 
-	//pClient->CloseSocket();
 
 }
 
@@ -288,14 +281,17 @@ void CRemoteClientDlg::OnBnClickedBtnTest()
 void CRemoteClientDlg::OnBnClickedBtnFileinfo()
 {
 	// TODO: 在此添加控件通知处理程序代码
-	int ret = CClientController::getInstance()->SendCommandPacket(1);
-	if (ret == -1) {
-		AfxMessageBox(TEXT("命令处理失败！"));
-		return;
+	std::list<CPacket> lstPackets;
+	int ret = CClientController::getInstance()->SendCommandPacket(1,true,NULL,0,&lstPackets);
+	if (-1 == ret || lstPackets.size() <= 0)
+	{
+		AfxMessageBox(L"命令处理失败");
 	}
-	CClientSocket* pClient = CClientSocket::getInstance();
+	CPacket& head = lstPackets.front();
+
+
 	m_Tree.DeleteAllItems();
-	string drivers = pClient->GetPacket().strData;
+	string drivers = head.strData;
 	string dr;
 
 	drivers += ",";
@@ -303,7 +299,7 @@ void CRemoteClientDlg::OnBnClickedBtnFileinfo()
 	for (size_t i = 0; i < drivers.size(); i++) {
 		if (drivers[i] == ',') {
 			dr += ':';
-			HTREEITEM hTemp = m_Tree.InsertItem((LPCTSTR)CStringW(dr.c_str()), TVI_ROOT, TVI_LAST);
+			HTREEITEM hTemp = m_Tree.InsertItem((LPCTSTR)CString(dr.c_str()), TVI_ROOT, TVI_LAST);
 			m_Tree.InsertItem(NULL, hTemp, TVI_LAST);
 			dr.clear();
 			continue;
