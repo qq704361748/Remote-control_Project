@@ -45,11 +45,11 @@ public:
 	 * 7.锁机 \n
 	 * 8.解锁 \n
 	 * 9.删除文件 \n
-	 * \return 命令cmd
+	 * \return 状态
 	 */
 
 	 // 实现
-	int SendCommandPacket(int nCmd, bool bAutoClose = true, BYTE* pData = NULL, size_t nLength = 0, std::list<CPacket>* plstPacks =NULL);
+	bool SendCommandPacket(HWND hWnd,int nCmd, bool bAutoClose = true, BYTE* pData = NULL, size_t nLength = 0);
 
 	int GetImage(CImage& image);
 

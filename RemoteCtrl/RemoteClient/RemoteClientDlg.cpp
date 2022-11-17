@@ -77,7 +77,7 @@ void CRemoteClientDlg::LoadFileCurrent()
 	m_List.DeleteAllItems();
 	USES_CONVERSION;
 	std::string    str(W2A(strPath));
-	int            nCmd    = CClientController::getInstance()->SendCommandPacket(2, false, (BYTE*)str.c_str(), str.length());
+	int            nCmd    = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 2, false, (BYTE*)str.c_str(), str.length());
 	PFILEINFO      pInfo   = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();
 	
 
@@ -131,7 +131,7 @@ void CRemoteClientDlg::LoadFileInfo()
 	string         str(W2A(strPath));
 
 	std::list<CPacket> lstPacks;
-	int            ncmd = CClientController::getInstance()->SendCommandPacket(2, false, (BYTE*)str.c_str(), str.length(),&lstPacks);
+	int            ncmd = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 2, false, (BYTE*)str.c_str(), str.length());
 	//int            ncmd = CClientController::getInstance()->SendCommandPacket(2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength(),&lstPacks);
 	if (lstPacks.size() >0) {
 		std::list<CPacket>::iterator it = lstPacks.begin();
@@ -274,7 +274,7 @@ HCURSOR CRemoteClientDlg::OnQueryDragIcon()
 
 void CRemoteClientDlg::OnBnClickedBtnTest()
 {
-	CClientController::getInstance()->SendCommandPacket(1981);
+	CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 1981);
 }
 
 
@@ -282,7 +282,7 @@ void CRemoteClientDlg::OnBnClickedBtnFileinfo()
 {
 	// TODO: 在此添加控件通知处理程序代码
 	std::list<CPacket> lstPackets;
-	int ret = CClientController::getInstance()->SendCommandPacket(1,true,NULL,0,&lstPackets);
+	int ret = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 1,true,NULL,0);
 	if (-1 == ret || lstPackets.size() <= 0)
 	{
 		AfxMessageBox(L"命令处理失败");
@@ -402,7 +402,7 @@ void CRemoteClientDlg::OnDeleteFile()
 
 	USES_CONVERSION;
 	std::string cstrPath(W2A(strFile));
-	int         ret = CClientController::getInstance()->SendCommandPacket(9, true, (BYTE*)cstrPath.c_str(), cstrPath.size());
+	int         ret = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 9, true, (BYTE*)cstrPath.c_str(), cstrPath.size());
 	if (ret < 0) {
 		AfxMessageBox(TEXT("删除文件命令执行失败！"));
 	}
@@ -419,7 +419,7 @@ void CRemoteClientDlg::OnRunFile()
 
 	USES_CONVERSION;
 	std::string cstrPath(W2A(strFile));
-	int         ret = CClientController::getInstance()->SendCommandPacket(3, true, (BYTE*)cstrPath.c_str(), cstrPath.size());
+	int         ret = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 3, true, (BYTE*)cstrPath.c_str(), cstrPath.size());
 	if (ret < 0) {
 		AfxMessageBox(TEXT("打开文件命令执行失败！"));
 	}
@@ -434,13 +434,13 @@ void CRemoteClientDlg::OnBnClickedBtnStartWatch()
 
 void CRemoteClientDlg::OnBnClickedBtnLock()
 {
-	CClientController::getInstance()->SendCommandPacket(7);
+	CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 7);
 }
 
 
 void CRemoteClientDlg::OnBnClickedBtnUnlock()
 {
-	CClientController::getInstance()->SendCommandPacket(8);
+	CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 8);
 }
 
 

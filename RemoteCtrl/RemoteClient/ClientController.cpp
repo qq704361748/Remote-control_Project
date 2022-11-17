@@ -81,32 +81,11 @@ void CClientController::CloseSocket()
 //
 // }
 
-int CClientController::SendCommandPacket(int nCmd , bool bAutoClose, BYTE* pData, size_t nLength, std::list<CPacket>* plstPacks)
+bool CClientController::SendCommandPacket(HWND hWnd, int nCmd, bool bAutoClose, BYTE* pData , size_t nLength )
 {
-	TRACE("cmd: %d %s start %lld \r\n",nCmd, __FUNCTION__, GetTickCount64());
-
 	CClientSocket* pClient = CClientSocket::getInstance();
-	//if (pClient->InitSocket() == false) return false;
-
-	HANDLE hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
 	
-	std::list<CPacket> lstPacks;//应答结果的包
-	if (plstPacks == NULL) {
-		plstPacks = &lstPacks;
-	}
-	pClient->SendPacket(CPacket(nCmd,pData,nLength,hEvent),*plstPacks,bAutoClose);
-
-	CloseHandle(hEvent);  //回收事件句柄，防止资源耗尽
-
-	if (plstPacks->size() > 0) {
-		TRACE("%s start %lld \r\n", __FUNCTION__, GetTickCount64());
-		TRACE("sCmd:%d\r\n", plstPacks->front().sCmd);
-		return plstPacks->front().sCmd;
-		
-	}
-	TRACE("%s start %lld \r\n", __FUNCTION__, GetTickCount64());
-	return -1;
-
+	return pClient->SendPacket(hWnd,CPacket(nCmd,pData,nLength),bAutoClose);
 }
 
 int CClientController::GetImage(CImage& image)
@@ -209,7 +188,7 @@ void CClientController::threadDownloadFile()
 
 	do
 	{
-		int ret = SendCommandPacket(4, false, (BYTE*)c_m_strRemote.c_str(), c_m_strRemote.size());
+		int ret = SendCommandPacket(m_remoteDlg.GetSafeHwnd(),4, false, (BYTE*)c_m_strRemote.c_str(), c_m_strRemote.size());
 
 		long long nLength = *(long long*)pClient->GetPacket().strData.c_str();
 		if (nLength == 0)
@@ -260,8 +239,9 @@ void CClientController::threadWatchScreen()
 		
 		if (m_watchDlg.m_isFull == false) {
 			std::list<CPacket> lstPacks;
-			int ret = SendCommandPacket(6,true,NULL,0,&lstPacks);
-
+			int ret = SendCommandPacket(m_watchDlg.GetSafeHwnd(),6,true,NULL,0);
+			//TODO:添加消息响应函数 WM_SEND_PACK_ACK
+			//TODO:控制发送频率
 			if (ret == 6) {
 				
 				if (CTools::Bytes2Image(m_watchDlg.m_image, lstPacks.front().strData) == 0) {

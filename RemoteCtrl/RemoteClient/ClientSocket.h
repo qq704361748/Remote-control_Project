@@ -8,6 +8,13 @@
 #include "framework.h"
 #include <mutex>
 
+#define WM_SEND_PACK (WM_USER+1)  //发包
+#define WM_SEND_PACK_ACK (WM_USER+2)  //应答包
+
+enum
+{
+	CSM_AUTOCLOSE = 1,   //Client Socket Mode_ AutoClose 自动关闭模式
+};
 
 #pragma pack(push)
 #pragma pack(1)
@@ -17,7 +24,7 @@ class CPacket
 {
 public:
 	CPacket();                                                          //默认构造
-	CPacket(WORD nCmd, const BYTE* pData, size_t nSize, HANDLE hEvent); //封包
+	CPacket(WORD nCmd, const BYTE* pData, size_t nSize); //封包
 	CPacket(const BYTE* pData, size_t& nSize);                          //解包
 	CPacket(const CPacket& pack);                                       //拷贝构造
 	CPacket& operator=(const CPacket& pack);                            //赋值构造
@@ -33,7 +40,7 @@ public:
 	std::string strData; //数据
 	WORD        sSum;    //和校验
 	//std::string strOut;  //整个包的数据
-	HANDLE hEvent;
+	//HANDLE hEvent;
 };
 
 #pragma pack(pop)
@@ -64,6 +71,18 @@ typedef struct file_info
 }        FILEINFO, *PFILEINFO;
 
 
+typedef struct PacketData
+{
+	std::string strData;
+	UINT nMode;
+	PacketData(const char* pData, size_t nLen, UINT mode);
+	PacketData(const PacketData& data);
+	PacketData& operator=(const PacketData& data);
+
+}PACKET_DATA;
+
+
+
 string GetErrorInfo(int wsaErrCode);
 
 class CClientSocket //服务端Socket类 （用于初始化和结束时销毁  单例）
@@ -80,13 +99,20 @@ public:
 
 	void UpdateAddress(int nIP, int nPort);
 
-	bool SendPacket(const CPacket& pack,std::list<CPacket>& lstPacks, bool isAutoClose = true);
+	bool SendPacket(HWND hWnd, const CPacket& pack, bool isAutoClose = true);
 
+	
 
 private:
+	UINT m_nThreadID;
+
+
+	typedef void(CClientSocket::* MSGFUNC)(UINT nMsg, WPARAM wParam, LPARAM lparam);
+	std::map<UINT, MSGFUNC> m_mapFunc;//UINT 无符号整数型 用信号跟函数指针对应.
+
+
 	HANDLE m_hThread;
 	std::mutex m_lock;
-
 
 
 	std::map<HANDLE, bool> m_mapAutoClosed;
@@ -104,11 +130,14 @@ private:
 	CPacket      m_packet;
 
 
-	static void threadEntry(void* arg);
+	static unsigned __stdcall threadEntry(void* arg);
 	void        threadFunc();
+	void		threadFunc2();
 
 	bool Send(const char* pData, int nSize); //发送消息
 	bool Send(const CPacket& pack);          //发送数据
+
+	void SendPack(UINT nMsg, WPARAM wParam, LPARAM lparam);
 
 	CClientSocket& operator=(const CClientSocket& ss) = delete; //禁用赋值构造 实现单例
 	CClientSocket(const CClientSocket& ss);                     //拷贝构造 实现单例

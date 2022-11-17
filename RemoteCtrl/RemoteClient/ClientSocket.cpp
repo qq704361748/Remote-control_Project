@@ -11,6 +11,28 @@ CClientSocket::CHelper CClientSocket::m_helper;
 CClientSocket* pclient = CClientSocket::getInstance();
 
 
+PacketData::PacketData(const char* pData, size_t nLen, UINT mode)
+{
+	strData.resize(nLen);
+	memcpy((char*)strData.c_str(), pData, nLen);
+	nMode = mode;
+}
+
+PacketData::PacketData(const PacketData& data)
+{
+	strData = data.strData;
+	nMode = data.nMode;
+}
+
+PacketData& PacketData::operator=(const PacketData& data)
+{
+	if (this!=&data) {
+		strData = data.strData;
+		nMode = data.nMode;
+	}
+	return *this;
+}
+
 string GetErrorInfo(int wsaErrCode)
 {
 	string ret;
@@ -122,6 +144,70 @@ bool CClientSocket::Send(const CPacket& pack)
 	return send(m_sock, strOut.c_str(), strOut.size(), 0) > 0;
 }
 
+void CClientSocket::SendPack(UINT nMsg, WPARAM wParam, LPARAM lparam)
+{
+	//定义一个消息的数据结构(数据和数据长度,模式)  回调消息的数据结构(hwnd,message)
+	HWND hWnd = (HWND)lparam;
+
+	if (InitSocket() == true)
+	{
+		PACKET_DATA data = *(PacketData*)wParam;
+		delete (PacketData*)wParam;
+
+		int ret = send(m_sock, data.strData.c_str(), (int)data.strData.size(), 0);//通过命令调用send处
+		if (ret > 0)
+		{
+			size_t index = 0;
+			std::string strBuffer;
+			strBuffer.resize(BUFFER_SIZE);
+			char* pBuffer = (char*)strBuffer.c_str();
+			while (m_sock != INVALID_SOCKET)
+			{
+				int length = recv(m_sock, pBuffer + index, BUFFER_SIZE - index, 0);
+				if (length > 0 || index > 0)
+				{
+					index += (size_t)length;
+					size_t nlen = length;
+					CPacket pack((BYTE*)pBuffer, nlen);
+					if (nlen > 0)
+					{
+						TRACE("ack pack %d to hWnd %08X %d %d\r\n", pack.sCmd, hWnd, index, nlen);
+						TRACE("%04X\r\n", *(WORD*)(pBuffer + nlen));
+						::SendMessage(hWnd, WM_SEND_PACK_ACK, (WPARAM)new CPacket(pack), NULL);//
+						if (data.nMode & CSM_AUTOCLOSE)
+						{
+							CloseSocket();
+							return;
+						}
+					}
+					index -= nlen;
+					memmove(pBuffer, pBuffer + nlen, index);
+				}
+				else
+				{
+					CloseSocket();
+					::SendMessage(hWnd, WM_SEND_PACK_ACK, NULL, 1);//回调  这里应该有个回调类吧
+				}
+			}
+		}
+		else {
+			CloseSocket();
+			::SendMessage(hWnd, WM_SEND_PACK_ACK, NULL, -1);//回调  这里应该有个回调类吧
+		}
+	}
+	else
+	{
+		//TODO:错误处理
+		CloseSocket();
+		::SendMessage(hWnd, WM_SEND_PACK_ACK, NULL, -2);//回调  这里应该有个回调类吧
+	}
+
+
+
+
+
+}
+
 bool CClientSocket::GetFilePath(std::string& strPath)
 {
 	if ((m_packet.sCmd >= 2) && (m_packet.sCmd <= 4)) //当命令为2时，即为获取文件目录
@@ -162,7 +248,7 @@ void CClientSocket::UpdateAddress(int nIP, int nPort)
 	}
 	
 
-bool CClientSocket::SendPacket(const CPacket& pack, std::list<CPacket>& lstPacks,bool isAutoClose)
+/*bool CClientSocket::SendPacket(const CPacket& pack, std::list<CPacket>& lstPacks,bool isAutoClose)
 {
 	if (m_sock == INVALID_SOCKET && m_hThread == INVALID_HANDLE_VALUE) {
 
@@ -170,6 +256,7 @@ bool CClientSocket::SendPacket(const CPacket& pack, std::list<CPacket>& lstPacks
 
 		m_hThread=(HANDLE)_beginthread(&CClientSocket::threadEntry, 0, this);
 	}
+
 	m_lock.lock();
 
 	auto pr = m_mapAck.insert(std::pair<HANDLE, std::list<CPacket>&>(pack.hEvent, lstPacks));
@@ -189,17 +276,28 @@ bool CClientSocket::SendPacket(const CPacket& pack, std::list<CPacket>& lstPacks
 		return true;
 	}
 	return false;
+}*/
+
+bool CClientSocket::SendPacket(HWND hWnd, const CPacket& pack, bool isAutoClose)
+{
+	if (m_hThread == INVALID_HANDLE_VALUE) {
+		m_hThread = (HANDLE)_beginthreadex(NULL, 0, &CClientSocket::threadEntry, this, 0, &m_nThreadID);
+	}
+	UINT nMode = isAutoClose ? CSM_AUTOCLOSE : 0 ;
+	std::string strOut;
+	pack.Data(strOut);
+	return PostThreadMessage(m_nThreadID, WM_SEND_PACK, (WPARAM)new PACKET_DATA(strOut.c_str(),strOut.size(),nMode), (LPARAM)hWnd);
 }
 
-
-void CClientSocket::threadEntry(void* arg)
+unsigned __stdcall CClientSocket::threadEntry(void* arg)
 {
 	auto* thiz = (CClientSocket*)arg;
-	thiz->threadFunc();
-
+	thiz->threadFunc2();
+	_endthreadex(0);
+	return 0;
 }
 
-void CClientSocket::threadFunc()
+/*void CClientSocket::threadFunc()
 {
 	
 	std::string strBuffer;
@@ -247,7 +345,6 @@ void CClientSocket::threadFunc()
 					else if (length <= 0 && index <= 0) {
 						CloseSocket();
 						SetEvent(head.hEvent);
-						m_mapAutoClosed.erase(it0);
 						break;
 					}
 				} while (it0->second == false  );
@@ -257,6 +354,7 @@ void CClientSocket::threadFunc()
 			//std::list<CPacket> lstRecv;
 			m_lock.lock();
 			m_lstSend.pop_front();
+			m_mapAutoClosed.erase(head.hEvent);
 			m_lock.unlock();
 			if(InitSocket() == false) {
 				InitSocket();
@@ -266,19 +364,38 @@ void CClientSocket::threadFunc()
 		}
 	}
 	CloseSocket();
+}*/
+
+void CClientSocket::threadFunc2()
+{
+	MSG msg;
+	while (::GetMessage(&msg, NULL, 0, 0))
+	{
+		//SetEvent(m_eventInvoke);
+		TranslateMessage(&msg);//将虚拟键消息转换为字符消息。字符消息将发布到调用线程的消息队列中  大概意思就是将按键事件转成一个字符传进去
+		DispatchMessage(&msg);//将消息调度到窗口过程。它通常用于调度由GetMessage函数检索的消息。把上面的那个按键事件返回给消息队列
+
+		if (m_mapFunc.find(msg.message) != m_mapFunc.end())
+		{
+			(this->*m_mapFunc[msg.message])(msg.message, msg.wParam, msg.lParam);//使用map  将数据发送给对应的发送函数
+		}
+
+	}
+
 }
-
-
-
-
 
 
 CClientSocket::CClientSocket(const CClientSocket& ss)
 {
+	m_hThread = INVALID_HANDLE_VALUE;
 	m_bAutoClose = ss.m_bAutoClose;
 	m_sock = ss.m_sock;
 	m_nIP = ss.m_nIP;
 	m_nPort = ss.m_nPort;
+	std::map<UINT, MSGFUNC>::const_iterator it= ss.m_mapFunc.begin();
+	for (;it!= ss.m_mapFunc.end();it++) {
+		m_mapFunc.insert(std::pair<UINT, MSGFUNC>(it->first, it->second));
+	}
 }
 
 CClientSocket::CClientSocket():m_nIP(INADDR_ANY), m_nPort(0),m_sock(INVALID_SOCKET), m_bAutoClose(true),m_hThread(INVALID_HANDLE_VALUE)
@@ -290,7 +407,22 @@ CClientSocket::CClientSocket():m_nIP(INADDR_ANY), m_nPort(0),m_sock(INVALID_SOCK
 		exit(0);
 	}
 	m_buffer.resize(BUFFER_SIZE);
+	memset(m_buffer.data(), 0, BUFFER_SIZE);
+	struct {
+		UINT message;
+		MSGFUNC func;
+	}funcs[] = {
+		{WM_SEND_PACK,&CClientSocket::SendPack},
+		{0,NULL}
+	};
 
+	for (int i = 0; funcs[i].message != 0; i++)//相当于把映射表,插入到map中去;
+	{
+		if (m_mapFunc.insert(std::pair<UINT, CClientSocket::MSGFUNC>(funcs[i].message, funcs[i].func)).second == false)
+		{
+			TRACE("插入失败\r\n");
+		}
+	}
 	
 
 }
@@ -333,7 +465,7 @@ CClientSocket::CHelper::~CHelper()
 
 CPacket::CPacket() : sHead(0), nLength(0), sCmd(0), sSum(0) {}
 
-CPacket::CPacket(WORD nCmd, const BYTE* pData, size_t nSize,HANDLE hEvent) //封包
+CPacket::CPacket(WORD nCmd, const BYTE* pData, size_t nSize) //封包
 {
 	sHead   = 0xFEFF;
 	nLength = nSize + 4;
@@ -349,10 +481,10 @@ CPacket::CPacket(WORD nCmd, const BYTE* pData, size_t nSize,HANDLE hEvent) //封
 	for (size_t j = 0; j < strData.size(); ++j) {
 		sSum += BYTE(strData[j]) & 0xFF;
 	}
-	this->hEvent = hEvent;
+	
 }
 
-CPacket::CPacket(const BYTE* pData, size_t& nSize):hEvent(INVALID_HANDLE_VALUE) //解包
+CPacket::CPacket(const BYTE* pData, size_t& nSize)//解包
 {
 	size_t i = 0;
 	for (; i < nSize; ++i) {
@@ -408,7 +540,6 @@ CPacket::CPacket(const CPacket& pack)
 	sCmd    = pack.sCmd;
 	strData = pack.strData;
 	sSum    = pack.sSum;
-	hEvent = pack.hEvent;
 }
 
 CPacket& CPacket::operator=(const CPacket& pack)
@@ -419,7 +550,6 @@ CPacket& CPacket::operator=(const CPacket& pack)
 		sCmd    = pack.sCmd;
 		strData = pack.strData;
 		sSum    = pack.sSum;
-		hEvent = pack.hEvent;
 	}
 	return *this;
 }

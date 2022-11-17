@@ -114,7 +114,7 @@ void CWatchDialog::OnLButtonDblClk(UINT nFlags, CPoint point)
 		even.ptXY    = remote;
 		even.nButton = 0; //左键
 		even.nAction = 1; //双击
-		CClientController::getInstance()->SendCommandPacket(5, true, (BYTE*)&even, sizeof(even));
+		CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(),5, true, (BYTE*)&even, sizeof(even));
 	}
 
 
@@ -133,7 +133,7 @@ void CWatchDialog::OnLButtonDown(UINT nFlags, CPoint point)
 
 		TRACE(" 1 ---- x=%d  y=%d \r\n", point.x, point.y);
 
-		CClientController::getInstance()->SendCommandPacket(5, true, (BYTE*)&even, sizeof(even));
+		CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 5, true, (BYTE*)&even, sizeof(even));
 	}
 
 
@@ -150,7 +150,7 @@ void CWatchDialog::OnLButtonUp(UINT nFlags, CPoint point)
 		even.nButton = 0; //左键
 		even.nAction = 3; //弹起
 
-		CClientController::getInstance()->SendCommandPacket(5, true, (BYTE*)&even, sizeof(even));
+		CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 5, true, (BYTE*)&even, sizeof(even));
 	}
 
 	CDialog::OnLButtonUp(nFlags, point);
@@ -166,7 +166,7 @@ void CWatchDialog::OnRButtonDblClk(UINT nFlags, CPoint point)
 		even.nButton = 1; //右键
 		even.nAction = 1; //双击
 
-		CClientController::getInstance()->SendCommandPacket(5, true, (BYTE*)&even, sizeof(even));
+		CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 5, true, (BYTE*)&even, sizeof(even));
 	}
 
 
@@ -183,7 +183,7 @@ void CWatchDialog::OnRButtonDown(UINT nFlags, CPoint point)
 		even.nButton = 1; //右键
 		even.nAction = 2; //按下//TODO:服务端做对应修改
 
-		CClientController::getInstance()->SendCommandPacket(5, true, (BYTE*)&even, sizeof(even));
+		CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 5, true, (BYTE*)&even, sizeof(even));
 	}
 
 
@@ -200,7 +200,7 @@ void CWatchDialog::OnRButtonUp(UINT nFlags, CPoint point)
 		even.nButton = 1; //右键
 		even.nAction = 3; //弹起
 
-		CClientController::getInstance()->SendCommandPacket(5, true, (BYTE*)&even, sizeof(even));
+		CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 5, true, (BYTE*)&even, sizeof(even));
 	}
 
 
@@ -211,13 +211,12 @@ void CWatchDialog::OnRButtonUp(UINT nFlags, CPoint point)
 void CWatchDialog::OnMouseMove(UINT nFlags, CPoint point)
 {
 	if (m_nObjWidth != -1 && m_nObjHeight != -1) {
-		// CPoint remote = UserPoint2RemoteScreenPoint(point);
-		// MOUSEEVENT even;
-		// even.ptXY = remote;
-		// even.nButton = 8;//没有按键
-		// even.nAction = 0;//移动
-		// CRemoteClientDlg* pParent = (CRemoteClientDlg*)GetParent();
-		// pParent->SendMessage(WM_SEND_PACKET, 5 << 1 | 1, (WPARAM)&even);
+		CPoint remote = UserPoint2RemoteScreenPoint(point);
+		MOUSEEVENT even;
+		even.ptXY = remote;
+		even.nButton = 8;//没有按键
+		even.nAction = 0;//移动
+		CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 5, true, (BYTE*)&even, sizeof(even));
 	}
 
 	CDialog::OnMouseMove(nFlags, point);
@@ -235,7 +234,7 @@ void CWatchDialog::OnStnClickedWatch()
 		even.nButton = 0; //左键
 		even.nAction = 0; //单击
 
-		CClientController::getInstance()->SendCommandPacket(5, true, (BYTE*)&even, sizeof(even));
+		CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(),5, true, (BYTE*)&even, sizeof(even));
 	}
 }
 
