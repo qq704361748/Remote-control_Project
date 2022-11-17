@@ -81,7 +81,7 @@ void CClientController::CloseSocket()
 //
 // }
 
-bool CClientController::SendCommandPacket(HWND hWnd, int nCmd, bool bAutoClose, BYTE* pData , size_t nLength )
+bool CClientController::SendCommandPacket(HWND hWnd, int nCmd, bool bAutoClose, BYTE* pData , size_t nLength)
 {
 	CClientSocket* pClient = CClientSocket::getInstance();
 	
@@ -104,7 +104,11 @@ int CClientController::DownFile(CString strPath)
 
 		m_strRemote = strPath;
 		m_strLocal = dlg.GetPathName();
-		
+
+		USES_CONVERSION;
+		string c_m_strRemote(W2A(m_strRemote));
+
+		//SendCommandPacket(m_remoteDlg.GetSafeHwnd(), 4, false, (BYTE*)c_m_strRemote.c_str(), c_m_strRemote.size(), (WPARAM)pFile);
 		m_hThreadDownload = (HANDLE)_beginthread(&CClientController::threadDownloadEntry, 0, this);
 
 		if (WaitForSingleObject(m_hThreadDownload, 0) != WAIT_TIMEOUT)
@@ -233,31 +237,28 @@ void CClientController::threadDownloadEntry(void* arg)
 void CClientController::threadWatchScreen()
 {
 	Sleep(50);
-
-	while (!m_isClosed) //等价于  while(true)
+	while (!m_isClosed)
 	{
-		
-		if (m_watchDlg.m_isFull == false) {
+		if (m_watchDlg.m_isFull == false)
+		{
 			std::list<CPacket> lstPacks;
-			int ret = SendCommandPacket(m_watchDlg.GetSafeHwnd(),6,true,NULL,0);
-			//TODO:添加消息响应函数 WM_SEND_PACK_ACK
-			//TODO:控制发送频率
-			if (ret == 6) {
-				
-				if (CTools::Bytes2Image(m_watchDlg.m_image, lstPacks.front().strData) == 0) {
+			int ret = SendCommandPacket(m_watchDlg.GetSafeHwnd(), 6, true, NULL, 0);
+			//TODO:添加响应消息函数 wm_send_pack_ack
+			//TODO: 控制发送频率
+			if (ret == 6 && lstPacks.size() > 0)
+			{
+				if (CTools::Bytes2Image(m_watchDlg.m_image, lstPacks.front().strData) == 0)
+				{
 					m_watchDlg.m_isFull = true;
 				}
-				else {
-					TRACE(TEXT("获取图片失败！\r\n"));
+				else
+				{
+					TRACE("获取图片失败!\r\n");
 				}
-			}
-			else {
-				Sleep(10);
+
 			}
 		}
-		else {
-			Sleep(10);
-		}
+		Sleep(1);
 	}
 
 }

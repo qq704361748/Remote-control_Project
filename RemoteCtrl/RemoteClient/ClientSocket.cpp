@@ -11,17 +11,19 @@ CClientSocket::CHelper CClientSocket::m_helper;
 CClientSocket* pclient = CClientSocket::getInstance();
 
 
-PacketData::PacketData(const char* pData, size_t nLen, UINT mode)
+PacketData::PacketData(const char* pData, size_t nLen, UINT mode, WPARAM wParam)
 {
 	strData.resize(nLen);
 	memcpy((char*)strData.c_str(), pData, nLen);
 	nMode = mode;
+	this->wParam = wParam;
 }
 
 PacketData::PacketData(const PacketData& data)
 {
 	strData = data.strData;
 	nMode = data.nMode;
+	wParam = data.wParam;
 }
 
 PacketData& PacketData::operator=(const PacketData& data)
@@ -29,6 +31,7 @@ PacketData& PacketData::operator=(const PacketData& data)
 	if (this!=&data) {
 		strData = data.strData;
 		nMode = data.nMode;
+		wParam = data.wParam;
 	}
 	return *this;
 }
@@ -201,11 +204,6 @@ void CClientSocket::SendPack(UINT nMsg, WPARAM wParam, LPARAM lparam)
 		CloseSocket();
 		::SendMessage(hWnd, WM_SEND_PACK_ACK, NULL, -2);//回调  这里应该有个回调类吧
 	}
-
-
-
-
-
 }
 
 bool CClientSocket::GetFilePath(std::string& strPath)
@@ -280,9 +278,7 @@ void CClientSocket::UpdateAddress(int nIP, int nPort)
 
 bool CClientSocket::SendPacket(HWND hWnd, const CPacket& pack, bool isAutoClose)
 {
-	if (m_hThread == INVALID_HANDLE_VALUE) {
-		m_hThread = (HANDLE)_beginthreadex(NULL, 0, &CClientSocket::threadEntry, this, 0, &m_nThreadID);
-	}
+	
 	UINT nMode = isAutoClose ? CSM_AUTOCLOSE : 0 ;
 	std::string strOut;
 	pack.Data(strOut);
@@ -371,7 +367,7 @@ void CClientSocket::threadFunc2()
 	MSG msg;
 	while (::GetMessage(&msg, NULL, 0, 0))
 	{
-		//SetEvent(m_eventInvoke);
+		SetEvent(m_eventInvoke);
 		TranslateMessage(&msg);//将虚拟键消息转换为字符消息。字符消息将发布到调用线程的消息队列中  大概意思就是将按键事件转成一个字符传进去
 		DispatchMessage(&msg);//将消息调度到窗口过程。它通常用于调度由GetMessage函数检索的消息。把上面的那个按键事件返回给消息队列
 
@@ -406,6 +402,14 @@ CClientSocket::CClientSocket():m_nIP(INADDR_ANY), m_nPort(0),m_sock(INVALID_SOCK
 		MessageBox(NULL, TEXT("无法初始化套接字环境,请检查网络设置"), TEXT("初始化错误"), MB_OK | MB_ICONERROR);
 		exit(0);
 	}
+	m_eventInvoke = CreateEvent(NULL, TRUE, FALSE, NULL);
+	m_hThread = (HANDLE)_beginthreadex(NULL, 0, &CClientSocket::threadEntry, this, 0, &m_nThreadID);
+
+	if (WaitForSingleObject(m_eventInvoke, 100) == WAIT_TIMEOUT) {
+		TRACE("网络消息处理线程启动失败了！\r\n");
+	}
+	CloseHandle(m_eventInvoke);
+
 	m_buffer.resize(BUFFER_SIZE);
 	memset(m_buffer.data(), 0, BUFFER_SIZE);
 	struct {

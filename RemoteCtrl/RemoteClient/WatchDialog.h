@@ -1,7 +1,9 @@
 ﻿#pragma once
 #include "afxdialogex.h"
 
-
+#ifndef WM_SEND_PACK_ACK
+#define WM_SEND_PACK_ACK (WM_USER+2)
+#endif
 
 // CWatchDialog 对话框
 
@@ -41,4 +43,6 @@ public:
 	afx_msg void OnStnClickedWatch();
 	virtual void OnOK();
 	virtual void OnCancel();
+
+	afx_msg LRESULT OnSendPackAck(WPARAM wParam, LPARAM lParam);
 };

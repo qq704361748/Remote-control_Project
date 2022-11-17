@@ -75,7 +75,8 @@ typedef struct PacketData
 {
 	std::string strData;
 	UINT nMode;
-	PacketData(const char* pData, size_t nLen, UINT mode);
+	WPARAM wParam;
+	PacketData(const char* pData, size_t nLen, UINT mode, WPARAM wParam = 0);
 	PacketData(const PacketData& data);
 	PacketData& operator=(const PacketData& data);
 
@@ -104,6 +105,10 @@ public:
 	
 
 private:
+
+	HANDLE m_eventInvoke;//启动事件
+
+
 	UINT m_nThreadID;
 
 

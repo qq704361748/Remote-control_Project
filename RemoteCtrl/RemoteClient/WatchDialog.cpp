@@ -41,6 +41,7 @@ BEGIN_MESSAGE_MAP(CWatchDialog, CDialog)
 	ON_WM_RBUTTONUP()
 	ON_WM_MOUSEMOVE()
 	ON_STN_CLICKED(IDC_WATCH, &CWatchDialog::OnStnClickedWatch)
+	ON_MESSAGE(WM_SEND_PACK_ACK, &CWatchDialog::OnSendPackAck)
 END_MESSAGE_MAP()
 
 
@@ -66,7 +67,7 @@ BOOL CWatchDialog::OnInitDialog()
 	CDialog::OnInitDialog();
 	//SetStretchBltMode(m_picture.GetDC()->GetSafeHdc(), HALFTONE);
 	m_isFull = false;
-	SetTimer(0, 45, NULL);
+	//SetTimer(0, 45, NULL);
 	
 	return TRUE; // return TRUE unless you set the focus to a control
 	// 异常: OCX 属性页应返回 FALSE
@@ -75,7 +76,7 @@ BOOL CWatchDialog::OnInitDialog()
 
 void CWatchDialog::OnTimer(UINT_PTR nIDEvent)
 {
-	// TODO: 在此添加消息处理程序代码和/或调用默认值
+	/*// TODO: 在此添加消息处理程序代码和/或调用默认值
 	if (nIDEvent == 0) {
 		
 		CClientController* pCtrl = CClientController::getInstance();
@@ -102,7 +103,7 @@ void CWatchDialog::OnTimer(UINT_PTR nIDEvent)
 			TRACE("更新图片完成！%d %d %08X\r\n", m_nObjWidth, m_nObjHeight,(HBITMAP)m_image);
 		} else { }
 	}
-	CDialog::OnTimer(nIDEvent);
+	CDialog::OnTimer(nIDEvent);*/
 }
 
 
@@ -257,4 +258,57 @@ void CWatchDialog::OnCancel()
 	pCtrl->m_isClosed = true;
 	this->ShowWindow(HIDE_WINDOW);
 	//CDialog::OnCancel();
+}
+
+LRESULT CWatchDialog::OnSendPackAck(WPARAM wParam, LPARAM lParam)
+{
+	if (lParam == -1 || (lParam == -2)) {
+		//TODO:错误处理
+	}
+	else if (lParam == 1) {
+		//对方关闭了套接字
+	}
+	else {
+		CPacket* pPacket = (CPacket*)wParam;
+		if (pPacket != NULL)
+		{
+			CPacket head = *(CPacket*)wParam;
+			delete (CPacket*)wParam;
+			switch (head.sCmd)
+			{
+			case 6:
+			{
+				if (m_isFull) {
+					CTools::Bytes2Image(m_image, head.strData);
+					SetStretchBltMode(m_picture.GetDC()->GetSafeHdc(), HALFTONE);
+
+					if (m_nObjWidth == -1)m_nObjWidth = m_image.GetWidth();
+					if (m_nObjHeight == -1)m_nObjHeight = m_image.GetHeight();
+
+					int x = m_image.GetWidth() * 4 / 5;
+					int y = m_image.GetHeight() * 4 / 5;
+
+					SetWindowPos(NULL, 0, 0, x + 16, y + 38, SWP_NOMOVE);  // +标题栏像素
+
+					m_picture.SetWindowPos(NULL, 0, 0, x, y, SWP_NOMOVE);
+
+
+					m_image.StretchBlt(m_picture.GetDC()->GetSafeHdc(), 0, 0, x, y, SRCCOPY);
+
+					m_picture.InvalidateRect(NULL);
+					m_image.Destroy();
+					m_isFull = false;
+					TRACE("更新图片完成！%d %d %08X\r\n", m_nObjWidth, m_nObjHeight, (HBITMAP)m_image);
+				}
+				break;
+			}
+			default:
+				break;
+			}
+
+		}
+
+	}
+
+	return 0;
 }
