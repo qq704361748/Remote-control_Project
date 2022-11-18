@@ -444,6 +444,7 @@ void CCommand::threadLockDlgMain()
 		if (msg.message == WM_KEYDOWN) {
 			//TRACE("msg:%08X wparam:%08X lparam:%08X\r\n", msg.message, msg.wParam, msg.lParam);
 			if (msg.wParam == 0x1B) {
+				
 				break;
 			}
 		}
@@ -451,5 +452,6 @@ void CCommand::threadLockDlgMain()
 
 	::ShowWindow(::FindWindow(TEXT("Shell_TrayWnd"), NULL), SW_SHOW); //显示任务栏
 	ShowCursor(true);
+	ClipCursor(NULL);
 	dlg.DestroyWindow(); //显示鼠标
 }

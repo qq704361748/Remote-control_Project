@@ -283,7 +283,7 @@ bool CClientSocket::SendPacket(HWND hWnd, const CPacket& pack, bool isAutoClose,
 	std::string strOut;
 	pack.Data(strOut);
 	bool ret = PostThreadMessage(m_nThreadID, WM_SEND_PACK, (WPARAM)new PACKET_DATA(strOut.c_str(),strOut.size(),nMode,wParam), (LPARAM)hWnd);
-	TRACE("PostThreadMessage Rrt: %d\r\n", ret);
+	//TRACE("PostThreadMessage Ret: %d\r\n", ret);
 	return ret;
 }
 

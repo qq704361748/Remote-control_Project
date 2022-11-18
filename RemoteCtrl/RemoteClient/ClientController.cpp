@@ -244,25 +244,25 @@ void CClientController::threadDownloadEntry(void* arg)
 void CClientController::threadWatchScreen()
 {
 	Sleep(50);
+	ULONGLONG nTick = GetTickCount64();
 	while (!m_isClosed)
 	{
 		if (m_watchDlg.m_isFull == false)
 		{
-			std::list<CPacket> lstPacks;
+			if (GetTickCount64() - nTick < 200) {
+				Sleep(200-DWORD(GetTickCount64()-nTick));
+				
+			}
+			nTick = GetTickCount64();
 			int ret = SendCommandPacket(m_watchDlg.GetSafeHwnd(), 6, true, NULL, 0);
 			//TODO:添加响应消息函数 wm_send_pack_ack
 			//TODO: 控制发送频率
-			if (ret == 6 && lstPacks.size() > 0)
+			if (ret == 1)
 			{
-				if (CTools::Bytes2Image(m_watchDlg.m_image, lstPacks.front().strData) == 0)
-				{
-					m_watchDlg.m_isFull = true;
-				}
-				else
-				{
-					TRACE("获取图片失败!\r\n");
-				}
+				//TRACE("成功发送图片！ ret = %d\r\n", ret);
 
+			} else {
+				TRACE("获取图片失败！ret = %d\r\n", ret);
 			}
 		}
 		Sleep(1);

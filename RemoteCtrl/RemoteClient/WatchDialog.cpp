@@ -278,7 +278,7 @@ LRESULT CWatchDialog::OnSendPackAck(WPARAM wParam, LPARAM lParam)
 			{
 			case 6:
 			{
-				if (m_isFull) {
+				if (!m_isFull) {
 					CTools::Bytes2Image(m_image, head.strData);
 					SetStretchBltMode(m_picture.GetDC()->GetSafeHdc(), HALFTONE);
 
