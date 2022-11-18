@@ -121,7 +121,10 @@ private:
 	
 	CWatchDialog                         m_watchDlg;
 	CRemoteClientDlg                     m_remoteDlg;
+public:
 	CStatusDlg                           m_statusDlg;
+	double                                pro_bar; //下载进度条百分比
+private:
 	HANDLE                               m_hThread;
 	unsigned                             m_nThreadID;
 
@@ -131,7 +134,7 @@ private:
 
 	HANDLE m_hThreadWatch;
 	
-
+	
 
 
 	static CClientController* m_instance;
@@ -151,4 +154,6 @@ inline void CClientController::DownLoadEnd()
 	m_statusDlg.ShowWindow(SW_HIDE);
 	m_remoteDlg.EndWaitCursor();
 	m_remoteDlg.MessageBox(TEXT("下载完成"), TEXT("完成"));
+	m_statusDlg.m_ProgressBar.SetPos(0);
+	pro_bar = 0;
 }

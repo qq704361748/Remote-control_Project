@@ -5,6 +5,7 @@
 #include "framework.h"
 #include "RemoteClient.h"
 #include "RemoteClientDlg.h"
+#include "StatusDlg.h"
 
 #include <list>
 
@@ -513,6 +514,11 @@ LRESULT CRemoteClientDlg::OnSendPackAck(WPARAM wParam, LPARAM lParam)
 					FILE* pFile = (FILE*)lParam;
 					fwrite(head.strData.c_str(), 1,head.strData.size(), pFile);
 					index += head.strData.size();
+
+					auto* Ctrl = CClientController::getInstance();
+					Ctrl->pro_bar = (double)index / (double)length;
+
+					CClientController::getInstance()->m_statusDlg.m_ProgressBar.SetPos((int)(Ctrl->pro_bar*100));
 				}
 			}
 				break;
