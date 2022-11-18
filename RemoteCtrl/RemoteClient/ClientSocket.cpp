@@ -282,7 +282,9 @@ bool CClientSocket::SendPacket(HWND hWnd, const CPacket& pack, bool isAutoClose,
 	UINT nMode = isAutoClose ? CSM_AUTOCLOSE : 0 ;
 	std::string strOut;
 	pack.Data(strOut);
-	return PostThreadMessage(m_nThreadID, WM_SEND_PACK, (WPARAM)new PACKET_DATA(strOut.c_str(),strOut.size(),nMode,wParam), (LPARAM)hWnd);
+	bool ret = PostThreadMessage(m_nThreadID, WM_SEND_PACK, (WPARAM)new PACKET_DATA(strOut.c_str(),strOut.size(),nMode,wParam), (LPARAM)hWnd);
+	TRACE("PostThreadMessage Rrt: %d\r\n", ret);
+	return ret;
 }
 
 unsigned __stdcall CClientSocket::threadEntry(void* arg)
