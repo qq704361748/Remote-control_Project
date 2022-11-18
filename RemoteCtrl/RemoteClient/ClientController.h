@@ -49,11 +49,13 @@ public:
 	 */
 
 	 // 实现
-	bool SendCommandPacket(HWND hWnd,int nCmd, bool bAutoClose = true, BYTE* pData = NULL, size_t nLength = 0);
+	bool SendCommandPacket(HWND hWnd,int nCmd, bool bAutoClose = true, BYTE* pData = NULL, size_t nLength = 0,WPARAM wParam = 0);
 
 	int GetImage(CImage& image);
 
 	int DownFile(CString strPath);
+	void DownLoadEnd();
+
 
 	void StartWathScreen();
 	bool m_isClosed; //监视窗口是否关闭（用于控制图片是否传输）
@@ -143,3 +145,10 @@ private:
 
 	static CHelper m_helper;
 };
+
+inline void CClientController::DownLoadEnd()
+{
+	m_statusDlg.ShowWindow(SW_HIDE);
+	m_remoteDlg.EndWaitCursor();
+	m_remoteDlg.MessageBox(TEXT("下载完成"), TEXT("完成"));
+}

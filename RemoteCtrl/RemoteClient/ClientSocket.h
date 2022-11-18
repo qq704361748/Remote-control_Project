@@ -100,7 +100,7 @@ public:
 
 	void UpdateAddress(int nIP, int nPort);
 
-	bool SendPacket(HWND hWnd, const CPacket& pack, bool isAutoClose = true);
+	bool SendPacket(HWND hWnd, const CPacket& pack, bool isAutoClose = true, WPARAM wParam = 0);
 
 	
 

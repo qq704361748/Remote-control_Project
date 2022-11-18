@@ -176,7 +176,7 @@ void CClientSocket::SendPack(UINT nMsg, WPARAM wParam, LPARAM lparam)
 					{
 						TRACE("ack pack %d to hWnd %08X %d %d\r\n", pack.sCmd, hWnd, index, nlen);
 						TRACE("%04X\r\n", *(WORD*)(pBuffer + nlen));
-						::SendMessage(hWnd, WM_SEND_PACK_ACK, (WPARAM)new CPacket(pack), NULL);//
+						::SendMessage(hWnd, WM_SEND_PACK_ACK, (WPARAM)new CPacket(pack), data.wParam);//
 						if (data.nMode & CSM_AUTOCLOSE)
 						{
 							CloseSocket();
@@ -276,13 +276,13 @@ void CClientSocket::UpdateAddress(int nIP, int nPort)
 	return false;
 }*/
 
-bool CClientSocket::SendPacket(HWND hWnd, const CPacket& pack, bool isAutoClose)
+bool CClientSocket::SendPacket(HWND hWnd, const CPacket& pack, bool isAutoClose,WPARAM wParam)
 {
 	
 	UINT nMode = isAutoClose ? CSM_AUTOCLOSE : 0 ;
 	std::string strOut;
 	pack.Data(strOut);
-	return PostThreadMessage(m_nThreadID, WM_SEND_PACK, (WPARAM)new PACKET_DATA(strOut.c_str(),strOut.size(),nMode), (LPARAM)hWnd);
+	return PostThreadMessage(m_nThreadID, WM_SEND_PACK, (WPARAM)new PACKET_DATA(strOut.c_str(),strOut.size(),nMode,wParam), (LPARAM)hWnd);
 }
 
 unsigned __stdcall CClientSocket::threadEntry(void* arg)

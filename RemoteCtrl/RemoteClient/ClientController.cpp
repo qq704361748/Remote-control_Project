@@ -81,11 +81,11 @@ void CClientController::CloseSocket()
 //
 // }
 
-bool CClientController::SendCommandPacket(HWND hWnd, int nCmd, bool bAutoClose, BYTE* pData , size_t nLength)
+bool CClientController::SendCommandPacket(HWND hWnd, int nCmd, bool bAutoClose, BYTE* pData , size_t nLength, WPARAM wParam)
 {
 	CClientSocket* pClient = CClientSocket::getInstance();
 	
-	return pClient->SendPacket(hWnd,CPacket(nCmd,pData,nLength),bAutoClose);
+	return pClient->SendPacket(hWnd,CPacket(nCmd,pData,nLength),bAutoClose,wParam);
 }
 
 int CClientController::GetImage(CImage& image)
@@ -106,15 +106,24 @@ int CClientController::DownFile(CString strPath)
 		m_strLocal = dlg.GetPathName();
 
 		USES_CONVERSION;
-		string c_m_strRemote(W2A(m_strRemote));
-
-		//SendCommandPacket(m_remoteDlg.GetSafeHwnd(), 4, false, (BYTE*)c_m_strRemote.c_str(), c_m_strRemote.size(), (WPARAM)pFile);
-		m_hThreadDownload = (HANDLE)_beginthread(&CClientController::threadDownloadEntry, 0, this);
-
-		if (WaitForSingleObject(m_hThreadDownload, 0) != WAIT_TIMEOUT)
+		FILE* pFile = fopen(W2A(m_strLocal), "wb+");
+		if (pFile == NULL)
 		{
+			AfxMessageBox(TEXT("本地无权限,文件无法创建"));
+			m_statusDlg.ShowWindow(SW_HIDE);
+			m_remoteDlg.EndWaitCursor();
 			return -1;
 		}
+
+		string c_m_strRemote(W2A(m_strRemote));
+
+		SendCommandPacket(m_remoteDlg.GetSafeHwnd(), 4, false, (BYTE*)c_m_strRemote.c_str(), c_m_strRemote.size(), (WPARAM)pFile);
+		//m_hThreadDownload = (HANDLE)_beginthread(&CClientController::threadDownloadEntry, 0, this);
+
+		/*if (WaitForSingleObject(m_hThreadDownload, 0) != WAIT_TIMEOUT)
+		{
+			return -1;
+		}*/
 
 		m_remoteDlg.BeginWaitCursor();
 		m_statusDlg.m_info.SetWindowTextW(L"命令执行中");
@@ -182,8 +191,6 @@ void CClientController::threadDownloadFile()
 	if (pFile == NULL)
 	{
 		AfxMessageBox(TEXT("本地无权限,文件无法创建"));
-		m_statusDlg.ShowWindow(SW_HIDE);
-		m_remoteDlg.EndWaitCursor();
 		return;
 	}
 	CClientSocket* pClient = CClientSocket::getInstance();
@@ -192,13 +199,13 @@ void CClientController::threadDownloadFile()
 
 	do
 	{
-		int ret = SendCommandPacket(m_remoteDlg.GetSafeHwnd(),4, false, (BYTE*)c_m_strRemote.c_str(), c_m_strRemote.size());
+		int ret = SendCommandPacket(m_remoteDlg.GetSafeHwnd(),4, false, (BYTE*)c_m_strRemote.c_str(), c_m_strRemote.size(), (WPARAM)pFile);
 
 		long long nLength = *(long long*)pClient->GetPacket().strData.c_str();
 		if (nLength == 0)
 		{
 			AfxMessageBox(L"文件长度为0,或无法读取");
-			pClient->CloseSocket();
+			//pClient->CloseSocket();
 			return;
 		}
 
@@ -210,7 +217,7 @@ void CClientController::threadDownloadFile()
 			{
 				AfxMessageBox(TEXT("传输失败!!!"));
 				TRACE("传输失败  %d\r\n", ret);
-				pClient->CloseSocket();
+				//pClient->CloseSocket();
 				return;
 			}
 			fwrite(pClient->GetPacket().strData.c_str(), 1, pClient->GetPacket().strData.size(), pFile);
