@@ -170,13 +170,13 @@ void CClientSocket::SendPack(UINT nMsg, WPARAM wParam, LPARAM lparam)
 				if (length > 0 || index > 0)
 				{
 					index += (size_t)length;
-					size_t nlen = length;
+					size_t nlen = index;
 					CPacket pack((BYTE*)pBuffer, nlen);
 					if (nlen > 0)
 					{
 						TRACE("ack pack %d to hWnd %08X %d %d\r\n", pack.sCmd, hWnd, index, nlen);
 						TRACE("%04X\r\n", *(WORD*)(pBuffer + nlen));
-						::SendMessage(hWnd, WM_SEND_PACK_ACK, (WPARAM)new CPacket(pack), data.wParam);//
+						::SendMessage(hWnd, WM_SEND_PACK_ACK, (WPARAM)new CPacket(pack), data.wParam);
 						if (data.nMode & CSM_AUTOCLOSE)
 						{
 							CloseSocket();
@@ -282,8 +282,12 @@ bool CClientSocket::SendPacket(HWND hWnd, const CPacket& pack, bool isAutoClose,
 	UINT nMode = isAutoClose ? CSM_AUTOCLOSE : 0 ;
 	std::string strOut;
 	pack.Data(strOut);
-	bool ret = PostThreadMessage(m_nThreadID, WM_SEND_PACK, (WPARAM)new PACKET_DATA(strOut.c_str(),strOut.size(),nMode,wParam), (LPARAM)hWnd);
+	PACKET_DATA* pData = new PACKET_DATA(strOut.c_str(), strOut.size(), nMode, wParam);
+	bool ret = PostThreadMessage(m_nThreadID, WM_SEND_PACK, (WPARAM)pData, (LPARAM)hWnd);
 	//TRACE("PostThreadMessage Ret: %d\r\n", ret);
+	if (ret == false) {
+		delete pData;
+	}
 	return ret;
 }
 
@@ -370,8 +374,8 @@ void CClientSocket::threadFunc2()
 	while (::GetMessage(&msg, NULL, 0, 0))
 	{
 		SetEvent(m_eventInvoke);
-		TranslateMessage(&msg);//将虚拟键消息转换为字符消息。字符消息将发布到调用线程的消息队列中  大概意思就是将按键事件转成一个字符传进去
-		DispatchMessage(&msg);//将消息调度到窗口过程。它通常用于调度由GetMessage函数检索的消息。把上面的那个按键事件返回给消息队列
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
 
 		if (m_mapFunc.find(msg.message) != m_mapFunc.end())
 		{

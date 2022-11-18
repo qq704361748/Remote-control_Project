@@ -82,7 +82,7 @@ int CCommand::MakeDriverInfo(std::list<CPacket>& lstPacket, CPacket& inPacket) /
 int CCommand::MakeDirectoryInfo(std::list<CPacket>& lstPacket, CPacket& inPacket) //获取指定文件夹下的信息
 {
 	std::string strPath = inPacket.strData;
-
+	
 
 	if (_chdir(strPath.c_str()) != 0) {
 		FILEINFO finfo;

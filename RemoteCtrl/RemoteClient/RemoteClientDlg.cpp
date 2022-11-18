@@ -130,27 +130,10 @@ void CRemoteClientDlg::LoadFileInfo()
 	USES_CONVERSION;
 	string str(W2A(strPath));
 
-	std::list<CPacket> lstPacks;
-	int ncmd = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 2, false, (BYTE*)str.c_str(),
+	TRACE("hTreeSelected %08X\r\n",hTreeSelected );
+	CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 2, false, (BYTE*)str.c_str(),
 	                                                               str.length(),(WPARAM)hTreeSelected);
-	//int            ncmd = CClientController::getInstance()->SendCommandPacket(2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength(),&lstPacks);
-	if (lstPacks.size() > 0) {
-		std::list<CPacket>::iterator it = lstPacks.begin();
-		for (; it != lstPacks.end(); it++) {
-			PFILEINFO pInfo = (PFILEINFO)(*it).strData.c_str();
-			if (pInfo->HasNext == false)continue;
 
-			if (pInfo->IsDirectory) {
-				if (CString(pInfo->szFileName) == TEXT(".") || CString(pInfo->szFileName) == TEXT("..")) {
-					continue;
-				}
-				HTREEITEM hTemp = m_Tree.InsertItem(CString(pInfo->szFileName), hTreeSelected, TVI_LAST);
-				m_Tree.InsertItem(NULL, hTemp, TVI_LAST);
-			} else {
-				m_List.InsertItem(0, CString(pInfo->szFileName));
-			}
-		}
-	}
 }
 
 
@@ -488,14 +471,19 @@ LRESULT CRemoteClientDlg::OnSendPackAck(WPARAM wParam, LPARAM lParam)
 			case 2:
 				{
 					PFILEINFO pInfo = (PFILEINFO)head.strData.c_str();
+					TRACE("HasNext: %d, IsDirectory: %d ,szFileName: %s\r\n", pInfo->HasNext, pInfo->IsDirectory, pInfo->szFileName);
 					if (pInfo->HasNext == false)break;
 
 					if (pInfo->IsDirectory) {
 						if (CString(pInfo->szFileName) == TEXT(".") || CString(pInfo->szFileName) == TEXT("..")) {
 							break;
 						}
+						TRACE("Hselected: %08X  m_Tree.GetSelectedItem: %08X\r\n", lParam,m_Tree.GetSelectedItem());
+
+
 						HTREEITEM hTemp = m_Tree.InsertItem(CString(pInfo->szFileName), (HTREEITEM)lParam, TVI_LAST);
 						m_Tree.InsertItem(NULL, hTemp, TVI_LAST);
+						m_Tree.Expand((HTREEITEM)lParam, TVE_EXPAND);
 					} else {
 						m_List.InsertItem(0, CString(pInfo->szFileName));
 					}

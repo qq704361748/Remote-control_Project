@@ -13,7 +13,8 @@
 
 enum
 {
-	CSM_AUTOCLOSE = 1,   //Client Socket Mode_ AutoClose 自动关闭模式
+	CSM_AUTOCLOSE = 1,
+	//Client Socket Mode_ AutoClose 自动关闭模式
 };
 
 #pragma pack(push)
@@ -23,11 +24,11 @@ using namespace std;
 class CPacket
 {
 public:
-	CPacket();                                                          //默认构造
+	CPacket();                                           //默认构造
 	CPacket(WORD nCmd, const BYTE* pData, size_t nSize); //封包
-	CPacket(const BYTE* pData, size_t& nSize);                          //解包
-	CPacket(const CPacket& pack);                                       //拷贝构造
-	CPacket& operator=(const CPacket& pack);                            //赋值构造
+	CPacket(const BYTE* pData, size_t& nSize);           //解包
+	CPacket(const CPacket& pack);                        //拷贝构造
+	CPacket& operator=(const CPacket& pack);             //赋值构造
 
 	int         Size();                          //获取包数据大小
 	const char* Data(std::string& strOut) const; //获取包数据
@@ -71,17 +72,15 @@ typedef struct file_info
 }        FILEINFO, *PFILEINFO;
 
 
-typedef struct PacketData
+using PACKET_DATA = struct PacketData
 {
 	std::string strData;
-	UINT nMode;
-	WPARAM wParam;
+	UINT        nMode;
+	WPARAM      wParam;
 	PacketData(const char* pData, size_t nLen, UINT mode, WPARAM wParam = 0);
 	PacketData(const PacketData& data);
 	PacketData& operator=(const PacketData& data);
-
-}PACKET_DATA;
-
+};
 
 
 string GetErrorInfo(int wsaErrCode);
@@ -102,27 +101,25 @@ public:
 
 	bool SendPacket(HWND hWnd, const CPacket& pack, bool isAutoClose = true, WPARAM wParam = 0);
 
-	
 
 private:
-
-	HANDLE m_eventInvoke;//启动事件
+	HANDLE m_eventInvoke; //启动事件
 
 
 	UINT m_nThreadID;
 
 
-	typedef void(CClientSocket::* MSGFUNC)(UINT nMsg, WPARAM wParam, LPARAM lparam);
-	std::map<UINT, MSGFUNC> m_mapFunc;//UINT 无符号整数型 用信号跟函数指针对应.
+	using MSGFUNC = void(CClientSocket::*)(UINT nMsg, WPARAM wParam, LPARAM lparam);
+	std::map<UINT, MSGFUNC> m_mapFunc; //UINT 无符号整数型 用信号跟函数指针对应.
 
 
-	HANDLE m_hThread;
+	HANDLE     m_hThread;
 	std::mutex m_lock;
 
 
-	std::map<HANDLE, bool> m_mapAutoClosed;
-	bool m_bAutoClose;
-	std::list<CPacket>              m_lstSend;
+	std::map<HANDLE, bool>           m_mapAutoClosed;
+	bool                             m_bAutoClose;
+	std::list<CPacket>               m_lstSend;
 	std::map<HANDLE, list<CPacket>&> m_mapAck;
 
 
@@ -136,8 +133,8 @@ private:
 
 
 	static unsigned __stdcall threadEntry(void* arg);
-	void        threadFunc();
-	void		threadFunc2();
+	void                      threadFunc();
+	void                      threadFunc2();
 
 	bool Send(const char* pData, int nSize); //发送消息
 	bool Send(const CPacket& pack);          //发送数据
