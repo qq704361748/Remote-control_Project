@@ -175,7 +175,7 @@ void CClientSocket::SendPack(UINT nMsg, WPARAM wParam, LPARAM lparam)
 					if (nlen > 0)
 					{
 						TRACE("ack pack %d to hWnd %08X %d %d\r\n", pack.sCmd, hWnd, index, nlen);
-						TRACE("%04X\r\n", *(WORD*)(pBuffer + nlen));
+						//TRACE("%04X\r\n", *(WORD*)(pBuffer + nlen));
 						::SendMessage(hWnd, WM_SEND_PACK_ACK, (WPARAM)new CPacket(pack), data.wParam);
 						if (data.nMode & CSM_AUTOCLOSE)
 						{
@@ -189,20 +189,20 @@ void CClientSocket::SendPack(UINT nMsg, WPARAM wParam, LPARAM lparam)
 				else
 				{
 					CloseSocket();
-					::SendMessage(hWnd, WM_SEND_PACK_ACK, NULL, 1);//回调  这里应该有个回调类吧
+					::SendMessage(hWnd, WM_SEND_PACK_ACK, NULL, 1);
 				}
 			}
 		}
 		else {
 			CloseSocket();
-			::SendMessage(hWnd, WM_SEND_PACK_ACK, NULL, -1);//回调  这里应该有个回调类吧
+			::SendMessage(hWnd, WM_SEND_PACK_ACK, NULL, -1);
 		}
 	}
 	else
 	{
 		//TODO:错误处理
 		CloseSocket();
-		::SendMessage(hWnd, WM_SEND_PACK_ACK, NULL, -2);//回调  这里应该有个回调类吧
+		::SendMessage(hWnd, WM_SEND_PACK_ACK, NULL, -2);
 	}
 }
 

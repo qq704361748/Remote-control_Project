@@ -126,10 +126,16 @@ int CClientController::DownFile(CString strPath)
 		}*/
 
 		m_remoteDlg.BeginWaitCursor();
+
 		m_statusDlg.m_info.SetWindowTextW(L"命令执行中");
 		m_statusDlg.ShowWindow(SW_SHOW);
 		m_statusDlg.CenterWindow(&m_remoteDlg);
 		m_statusDlg.SetActiveWindow();
+
+		m_statusDlg.m_ProgressBar.SetRange(0, 100);
+
+		m_statusDlg.m_ProgressBar.SetPos(0);
+
 
 	} 
 	return 0;
@@ -230,7 +236,7 @@ void CClientController::threadDownloadFile()
 	m_statusDlg.ShowWindow(SW_HIDE);
 	m_remoteDlg.EndWaitCursor();
 	m_remoteDlg.MessageBox(TEXT("下载完成"), TEXT("完成"));
-
+	m_remoteDlg.LoadFileInfo();
 
 }
 

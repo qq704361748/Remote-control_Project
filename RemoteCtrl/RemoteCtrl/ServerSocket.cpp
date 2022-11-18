@@ -57,7 +57,7 @@ int CServerSocket::Run(SOCKET_CALLBACK callback, void* arg,short port)
 	bool ret = InitSocket(port);
 	if (ret == false) return -1;
 
-	std::list<CPacket> lstPacket;
+	//std::list<CPacket> lstPacket;
 
 	m_callback = callback;
 	m_arg = arg;
@@ -76,17 +76,21 @@ int CServerSocket::Run(SOCKET_CALLBACK callback, void* arg,short port)
 		if (ret > 0) {
 			m_callback(m_arg, ret,lstPacket,m_packet);
 
-			while (lstPacket.size() > 0) {
+			sThread=(HANDLE)_beginthread(CServerSocket::threadSendEnter, 0, this);
+			WaitForSingleObject(sThread, INFINITE);
+			TRACE("发送线程创建成功 %d\r\n", sThread);
+			/*while (lstPacket.size() > 0) {
 				Send(lstPacket.front());
 				lstPacket.pop_front();
-			}
+			}*/
 		}
-		
+		Sleep(1);
 		CloseClient();
 	}
 	
 	return 0;
 }
+
 
 
 bool CServerSocket::AcceptClient()
@@ -197,6 +201,22 @@ void CServerSocket::releaseInstance()
 		CServerSocket* tmp = m_instance;
 		m_instance         = NULL;
 		delete tmp;
+	}
+}
+
+void CServerSocket::threadSendEnter(void* arg)
+{
+	auto* thiz = (CServerSocket*)arg;
+	thiz->threadSend();
+	_endthread();
+	TRACE("发送线程关闭 %d\r\n", thiz->sThread);
+}
+
+void CServerSocket::threadSend()
+{
+	while (lstPacket.size() > 0) {
+		Send(lstPacket.front());
+		lstPacket.pop_front();
 	}
 }
 

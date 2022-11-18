@@ -22,6 +22,9 @@ protected:
 	bool     Send(CPacket& pack);                //发送数据
 	void     CloseClient();                      //断开连接
 private:
+	HANDLE sThread;
+	std::list<CPacket> lstPacket;
+
 	SOCKET_CALLBACK m_callback;
 	void*           m_arg;
 	SOCKET          m_sock;   //服务端用于监听的socket
@@ -41,6 +44,11 @@ private:
 	static void releaseInstance(); //释放CServerSocket内存
 
 	static CServerSocket* m_instance; //实现单例
+
+
+	static void threadSendEnter(void* arg);
+	void threadSend();
+
 
 	class CHelper //辅助构建单例
 	{

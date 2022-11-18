@@ -28,11 +28,11 @@ protected:
 public:
 	
 	//bool m_isFull; //缓存是否有数据，true有，false无
-	
+	void LoadFileInfo();
+
 private:
 
 	void LoadFileCurrent();
-	void LoadFileInfo();
 	CString GetPath(HTREEITEM hTree);
 	void DeleteTreeChildrenItem(HTREEITEM hTree);
 

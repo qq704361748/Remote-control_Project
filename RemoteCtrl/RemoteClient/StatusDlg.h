@@ -23,4 +23,5 @@ protected:
 	DECLARE_MESSAGE_MAP()
 public:
 	CEdit m_info;
+	CProgressCtrl m_ProgressBar;
 };
