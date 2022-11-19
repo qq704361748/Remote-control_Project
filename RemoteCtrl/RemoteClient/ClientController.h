@@ -23,8 +23,6 @@ public:
 
 	int Invoke(CWnd*& pMainWnd); //启动
 
-	LRESULT MySendMessage(MSG msg); //发送消息
-
 	void UpdateAddress(int nIP, int nPort);
 
 	int DealCommand();
@@ -33,27 +31,27 @@ public:
 
 	bool SendPacket(const CPacket& pack);
 
-		/**
-	 * \brief
-	 * \param nCmd  \n
-	 * 1.查看磁盘分区 \n
-	 * 2.查看指定目录下的文件 \n
-	 * 3.打开文件 \n
-	 * 4.下载文件 \n
-	 * 5.鼠标操作 \n
-	 * 6.发送屏幕内容 \n
-	 * 7.锁机 \n
-	 * 8.解锁 \n
-	 * 9.删除文件 \n
-	 * \return 状态
-	 */
-
-	 // 实现
-	bool SendCommandPacket(HWND hWnd,int nCmd, bool bAutoClose = true, BYTE* pData = NULL, size_t nLength = 0,WPARAM wParam = 0);
+	/**
+	* \brief
+	* \param nCmd  \n
+	* 1.查看磁盘分区 \n
+	* 2.查看指定目录下的文件 \n
+	* 3.打开文件 \n
+	* 4.下载文件 \n
+	* 5.鼠标操作 \n
+	* 6.发送屏幕内容 \n
+	* 7.锁机 \n
+	* 8.解锁 \n
+	* 9.删除文件 \n
+	* \return 状态
+	*/
+	// 实现
+	bool SendCommandPacket(HWND   hWnd, int nCmd, bool bAutoClose = true, BYTE* pData = nullptr, size_t nLength = 0,
+	                       WPARAM wParam                          = 0);
 
 	int GetImage(CImage& image);
 
-	int DownFile(CString strPath);
+	int  DownFile(CString strPath);
 	void DownLoadEnd();
 
 
@@ -68,10 +66,7 @@ protected:
 	LRESULT OnShowStatus(UINT nMsg, WPARAM wParam, LPARAM lParam);
 	LRESULT OnShowWatch(UINT nMsg, WPARAM wParam, LPARAM lParam);
 
-	void threadDownloadFile();
-	static void threadDownloadEntry(void* arg);
-
-	void threadWatchScreen();
+	void        threadWatchScreen();
 	static void threadWatchScreen(void* arg);
 private:
 	CClientController();
@@ -80,7 +75,7 @@ private:
 	void                      threadFunc();
 	static unsigned __stdcall threadEntry(void* arg);
 
-	typedef struct MsgInfo
+	using MSGINFO = struct MsgInfo
 	{
 		MSG     msg;
 		LRESULT result;
@@ -113,28 +108,24 @@ private:
 			result = 0;
 			memset(&msg, 0, sizeof(MSG));
 		}
-	} MSGINFO;
+	};
 
 
-	typedef LRESULT (CClientController::*MSGFUNC)(UINT nMsg, WPARAM wParam, LPARAM lParam);
-	static std::map<UINT, MSGFUNC>       m_mapFunc;
-	
-	CWatchDialog                         m_watchDlg;
-	CRemoteClientDlg                     m_remoteDlg;
+	using MSGFUNC = LRESULT(CClientController::*)(UINT nMsg, WPARAM wParam, LPARAM lParam);
+	static std::map<UINT, MSGFUNC> m_mapFunc;
+
+	CWatchDialog     m_watchDlg;
+	CRemoteClientDlg m_remoteDlg;
 public:
-	CStatusDlg                           m_statusDlg;
-	double                                pro_bar; //下载进度条百分比
+	CStatusDlg m_statusDlg;
 private:
-	HANDLE                               m_hThread;
-	unsigned                             m_nThreadID;
+	HANDLE   m_hThread;
+	unsigned m_nThreadID;
 
-	CString m_strRemote;//下载文件的远程路径
-	CString m_strLocal;//下载文件的本地保存路径
-	HANDLE m_hThreadDownload;
+	CString m_strRemote; //下载文件的远程路径
+	CString m_strLocal;  //下载文件的本地保存路径
 
 	HANDLE m_hThreadWatch;
-	
-	
 
 
 	static CClientController* m_instance;
@@ -155,5 +146,4 @@ inline void CClientController::DownLoadEnd()
 	m_remoteDlg.EndWaitCursor();
 	m_remoteDlg.MessageBox(TEXT("下载完成"), TEXT("完成"));
 	m_statusDlg.m_ProgressBar.SetPos(0);
-	pro_bar = 0;
 }

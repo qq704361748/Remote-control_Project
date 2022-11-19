@@ -36,6 +36,9 @@ private:
 	CString GetPath(HTREEITEM hTree);
 	void DeleteTreeChildrenItem(HTREEITEM hTree);
 
+	void Str2Tree(std::string& drivers,CTreeCtrl& tree);
+	void UpdataFileInfo(const FILEINFO& finfo, HTREEITEM Parent);
+	void UpdataDownloadFile(const std::string& strData,FILE* pFile);
 protected:
 	HICON m_hIcon;
 	CStatusDlg m_dlgStatus;

@@ -121,7 +121,7 @@ void CRemoteClientDlg::LoadFileInfo()
 	if (hTreeSelected == NULL) {
 		return;
 	}
-	if (m_Tree.GetChildItem(hTreeSelected) == NULL) return;
+	// if (m_Tree.GetChildItem(hTreeSelected) == NULL) return;
 
 	DeleteTreeChildrenItem(hTreeSelected);
 	m_List.DeleteAllItems();
@@ -309,6 +309,82 @@ void CRemoteClientDlg::DeleteTreeChildrenItem(HTREEITEM hTree)
 	} while (hSub != NULL);
 }
 
+void CRemoteClientDlg::Str2Tree(std::string& drivers, CTreeCtrl& tree)
+{
+	tree.DeleteAllItems();
+	string dr;
+
+	drivers += ",";
+
+	for (size_t i = 0; i < drivers.size(); i++) {
+		if (drivers[i] == ',') {
+			dr += ':';
+			HTREEITEM hTemp = tree.InsertItem((LPCTSTR)CString(dr.c_str()), TVI_ROOT, TVI_LAST);
+			tree.InsertItem(NULL, hTemp, TVI_LAST);
+			dr.clear();
+			continue;
+		}
+		dr += drivers[i];
+	}
+
+
+
+
+}
+
+void CRemoteClientDlg::UpdataFileInfo(const FILEINFO& finfo,HTREEITEM hParent)
+{
+	TRACE("HasNext: %d, IsDirectory: %d ,szFileName: %s\r\n", finfo.HasNext, finfo.IsDirectory, finfo.szFileName);
+	if (finfo.HasNext == false)return;
+
+	if (finfo.IsDirectory) {
+		if (CString(finfo.szFileName) == TEXT(".") || CString(finfo.szFileName) == TEXT("..")) {
+			return;
+		}
+		TRACE("Hselected: %08X  m_Tree.GetSelectedItem: %08X\r\n", hParent, m_Tree.GetSelectedItem());
+
+
+		HTREEITEM hTemp = m_Tree.InsertItem(CString(finfo.szFileName), (HTREEITEM)hParent, TVI_LAST);
+		m_Tree.InsertItem(NULL, hTemp, TVI_LAST);
+		m_Tree.Expand((HTREEITEM)hParent, TVE_EXPAND);
+	}
+	else {
+		m_List.InsertItem(0, CString(finfo.szFileName));
+	}
+
+
+}
+
+void CRemoteClientDlg::UpdataDownloadFile(const std::string& strData, FILE* pFile)
+{
+	static LONGLONG length = 0, index = 0;
+	if (length == 0) {
+		length = *(long long*)strData.c_str();
+		if (length == 0)
+		{
+			AfxMessageBox(L"文件长度为0,或无法读取");
+			CClientController::getInstance()->DownLoadEnd();
+		}
+
+	}
+	else if (length > 0 && index >= length) {
+		fclose(pFile);
+		length = 0;
+		index = 0;
+		CClientController::getInstance()->DownLoadEnd();
+	}
+	else {
+		fwrite(strData.c_str(), 1, strData.size(), pFile);
+		index += strData.size();
+
+		double pro_bar = (double)index / (double)length;
+		CClientController::getInstance()->m_statusDlg.m_ProgressBar.SetPos((int)(pro_bar * 100));
+	}
+
+
+
+}
+
 void CRemoteClientDlg::OnNMDblclkTreeDir(NMHDR* pNMHDR, LRESULT* pResult)
 {
 	// TODO: 在此添加控件通知处理程序代码
@@ -450,83 +526,22 @@ LRESULT CRemoteClientDlg::OnSendPackAck(WPARAM wParam, LPARAM lParam)
 
 			switch (head.sCmd) {
 			case 1:
-				{
-					m_Tree.DeleteAllItems();
-					string drivers = head.strData;
-					string dr;
-
-					drivers += ",";
-
-					for (size_t i = 0; i < drivers.size(); i++) {
-						if (drivers[i] == ',') {
-							dr += ':';
-							HTREEITEM hTemp = m_Tree.InsertItem((LPCTSTR)CString(dr.c_str()), TVI_ROOT, TVI_LAST);
-							m_Tree.InsertItem(NULL, hTemp, TVI_LAST);
-							dr.clear();
-							continue;
-						}
-						dr += drivers[i];
-					}
-				}
+				Str2Tree(head.strData, m_Tree);
 				break;
 			case 2:
-				{
-					PFILEINFO pInfo = (PFILEINFO)head.strData.c_str();
-					TRACE("HasNext: %d, IsDirectory: %d ,szFileName: %s\r\n", pInfo->HasNext, pInfo->IsDirectory, pInfo->szFileName);
-					if (pInfo->HasNext == false)break;
-
-					if (pInfo->IsDirectory) {
-						if (CString(pInfo->szFileName) == TEXT(".") || CString(pInfo->szFileName) == TEXT("..")) {
-							break;
-						}
-						TRACE("Hselected: %08X  m_Tree.GetSelectedItem: %08X\r\n", lParam,m_Tree.GetSelectedItem());
-
-
-						HTREEITEM hTemp = m_Tree.InsertItem(CString(pInfo->szFileName), (HTREEITEM)lParam, TVI_LAST);
-						m_Tree.InsertItem(NULL, hTemp, TVI_LAST);
-						m_Tree.Expand((HTREEITEM)lParam, TVE_EXPAND);
-					} else {
-						m_List.InsertItem(0, CString(pInfo->szFileName));
-					}
-				}
+				UpdataFileInfo(*(PFILEINFO)head.strData.c_str(),(HTREEITEM)lParam);
 				break;
 			case 3:
 				TRACE("Run file done! \r\n");
 				break;
 			case 4:
-				{
-				static LONGLONG length = 0,index = 0;
-				if (length == 0) {
-					length = *(long long*)head.strData.c_str();
-					if (length == 0)
-					{
-						AfxMessageBox(L"文件长度为0,或无法读取");
-						CClientController::getInstance()->DownLoadEnd();
-					} 
-					
-				}else if (length > 0 && index >=length) {
-					fclose((FILE*)lParam);
-					length = 0;
-					index = 0;
-					CClientController::getInstance()->DownLoadEnd();
-				}
-				else {
-					FILE* pFile = (FILE*)lParam;
-					fwrite(head.strData.c_str(), 1,head.strData.size(), pFile);
-					index += head.strData.size();
-
-					auto* Ctrl = CClientController::getInstance();
-					Ctrl->pro_bar = (double)index / (double)length;
-
-					CClientController::getInstance()->m_statusDlg.m_ProgressBar.SetPos((int)(Ctrl->pro_bar*100));
-				}
-			}
+				UpdataDownloadFile(head.strData, (FILE*)lParam);
 				break;
 			case 9:
-				TRACE("Delete file done! \r\n");
+				MessageBox(TEXT("Delete file successful !!!"), TEXT("Congratulation！"), MB_ICONINFORMATION);
 				break;
 			case 1981:
-				TRACE("test connection success! \r\n");
+				MessageBox(TEXT("Connection test successful !!!"), TEXT("Congratulation！"),MB_ICONINFORMATION);
 				break;
 			default:
 				TRACE("Unknow data received! %d\r\n", head.sCmd);

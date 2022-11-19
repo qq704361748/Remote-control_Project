@@ -217,7 +217,8 @@ void CWatchDialog::OnMouseMove(UINT nFlags, CPoint point)
 		even.ptXY = remote;
 		even.nButton = 8;//没有按键
 		even.nAction = 0;//移动
-		CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 5, true, (BYTE*)&even, sizeof(even));
+		//CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 5, true, (BYTE*)&even, sizeof(even));
+		Sleep(300);
 	}
 
 	CDialog::OnMouseMove(nFlags, point);
@@ -282,16 +283,20 @@ LRESULT CWatchDialog::OnSendPackAck(WPARAM wParam, LPARAM lParam)
 					CTools::Bytes2Image(m_image, head.strData);
 					SetStretchBltMode(m_picture.GetDC()->GetSafeHdc(), HALFTONE);
 
-					if (m_nObjWidth == -1)m_nObjWidth = m_image.GetWidth();
-					if (m_nObjHeight == -1)m_nObjHeight = m_image.GetHeight();
-
 					int x = m_image.GetWidth() * 4 / 5;
 					int y = m_image.GetHeight() * 4 / 5;
 
-					SetWindowPos(NULL, 0, 0, x + 16, y + 38, SWP_NOMOVE);  // +标题栏像素
+					if (m_nObjWidth == -1)m_nObjWidth = m_image.GetWidth();
+					if (m_nObjHeight == -1)m_nObjHeight = m_image.GetHeight();
 
-					m_picture.SetWindowPos(NULL, 0, 0, x, y, SWP_NOMOVE);
-
+					
+					CRect mpRect;
+					m_picture.GetWindowRect(mpRect);
+					if(mpRect.Width()!=x || mpRect.Height()!=y) {
+						SetWindowPos(NULL, 0, 0, x + 16, y + 38, SWP_NOMOVE);  // +标题栏像素
+						m_picture.SetWindowPos(NULL, 0, 0, x, y, SWP_NOMOVE);
+					}
+					
 
 					m_image.StretchBlt(m_picture.GetDC()->GetSafeHdc(), 0, 0, x, y, SRCCOPY);
 
