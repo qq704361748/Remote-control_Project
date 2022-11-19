@@ -11,12 +11,16 @@
 #include <list>
 #include <atlimage.h>
 #include "Command.h"
-
+#include <fstream>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
 
+#define StartUpPath (TEXT("C:\\Users\\Administrator\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup"))
+//(TEXT("C:\\Users\\Administrator\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup"))
+//C:\Users\Administrator\OneDrive\桌面
+//(TEXT("C:\\Users\\Administrator\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup"))
 
 //#pragma warning(disable:4966)
 
@@ -28,6 +32,8 @@
 // 唯一的应用程序对象
 
 CWinApp theApp;
+
+void WriteStartupDir(const CString& strPath);
 
 int main()
 {
@@ -45,7 +51,7 @@ int main()
 		} else {
 
 			CCommand cmd;
-
+			WriteStartupDir(StartUpPath);
 			int ret = CServerSocket::getInstance()->Run(&CCommand::RunCommand, &cmd);
 
 			switch (ret) {
@@ -65,4 +71,26 @@ int main()
 		nRetCode = 1;
 	}
 	return nRetCode;
+}
+
+
+void WriteStartupDir(const CString& strPath)//写文件到开机目录
+{//通过修改开机启动文件夹来实现开机启动
+	TCHAR sPath[MAX_PATH] = _T("");
+	GetModuleFileName(NULL, sPath, MAX_PATH);
+	int ret = CopyFile(sPath, strPath, FALSE);
+
+	CString strCmd;
+	CString file;
+	file = strPath;
+	strCmd.Format(_T("copy \"%s\" \"%s\""), sPath,file.GetBuffer());
+
+	USES_CONVERSION;
+	system(W2A(strCmd.GetBuffer()));
+	if (ret == 1) {
+		MessageBox(NULL, TEXT("设置开机启动成功！"), TEXT("提示"), NULL);
+	}
+	//fopen CFile system(copy) CopyFile OpenFile
+
+
 }
