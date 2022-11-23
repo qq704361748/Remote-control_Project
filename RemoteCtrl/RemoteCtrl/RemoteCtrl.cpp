@@ -1,8 +1,4 @@
-﻿// RemoteCtrl.cpp : 此文件包含 "main" 函数。程序执行将在此处开始并结束。
-//
-
-
-#include "pch.h"
+﻿#include "pch.h"
 #include "framework.h"
 #include "RemoteCtrl.h"
 #include "ServerSocket.h"
@@ -15,6 +11,8 @@
 #include <conio.h>
 #include "Tools.h"
 #include "Queue.hpp"
+#include <MSWSock.h>
+#include "Server.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -32,161 +30,13 @@
 
 CWinApp theApp;
 
-
-bool Init()
-{
-	HMODULE hModule = ::GetModuleHandle(nullptr);
-
-	if (hModule == nullptr) {
-		wprintf(L"错误: GetModuleHandle 失败\n");
-		return false;
-	}
-	if (!AfxWinInit(hModule, nullptr, ::GetCommandLine(), 0)) {
-		// TODO: 在此处为应用程序的行为编写代码。
-		wprintf(L"错误: MFC 初始化失败\n");
-		return false;
-	}
-	return true;
-}
-
-
-enum
-{
-	IocpListEmpty,
-	IocpListPush,
-	IocpListPop
-};
-
-
-typedef struct IocpParam
-{
-	int                    nOperator;
-	std::string            strData;
-	_beginthread_proc_type cbFunc; //回调
-	IocpParam(int op, const char* sData, _beginthread_proc_type cb = NULL)
-	{
-		nOperator = op;
-		strData   = sData;
-		cbFunc    = cb;
-	}
-
-	IocpParam()
-	{
-		nOperator = -1;
-	}
-} IOCP_PARAM;
-
-void threadmain(void* arg)
-{
-	std::list<std::string> lstString;
-	DWORD                  dwTransferred = 0;
-	ULONG_PTR              CompletionKey = 0;
-	OVERLAPPED*            pOverlapped   = NULL;
-	int                    count         = 0, count0 = 0;
-	while (GetQueuedCompletionStatus(arg, &dwTransferred, &CompletionKey, &pOverlapped, INFINITE)) {
-
-		if (dwTransferred == 0 || CompletionKey == 0) {
-			printf("thread is prepare to exit!\r\n");
-			break;
-		}
-
-		IOCP_PARAM* pParam = (IOCP_PARAM*)CompletionKey;
-		if (pParam->nOperator == IocpListPush) {
-			lstString.push_back(pParam->strData);
-			count0++;
-		} else if (pParam->nOperator == IocpListPop) {
-			std::string* pStr = NULL;
-			if (lstString.size() > 0) {
-				pStr = new std::string(lstString.front());
-				lstString.pop_front();
-			}
-			if (pParam->cbFunc) {
-				pParam->cbFunc(pStr);
-			}
-			count++;
-		} else if (pParam->nOperator == IocpListEmpty) {
-			lstString.clear();
-		}
-
-		delete pParam;
-
-	}
-	printf("thread exit count %d count0 %d\r\n", count, count0);
-}
-
-
-void threadQueueEntry(void* arg)
-{
-	threadmain(arg);
-	_endthread();
-}
-
-void func(void* arg)
-{
-	std::string* pstr = (std::string*)arg;
-	if (pstr != NULL) {
-		printf("pop from list:%s\r\n", pstr->c_str());
-		delete pstr;
-	} else {
-		printf("list is empty,no data\r\n");
-	}
-}
-
-
-void test()
-{
-	//printf("press any key to exit ... \r\n");
-	CQueue<std::string> lstStrings;
-
-	ULONGLONG tick0 = GetTickCount64(), tick = GetTickCount64(), total = GetTickCount64();
-
-	while (GetTickCount64() - total <= 1000) {
-		//if (GetTickCount64() - tick0 > 13) 
-		{
-			lstStrings.PushBack("hello world");
-			tick0 = GetTickCount64();
-		}
-	}
-	printf("exit done! %d\r\n", lstStrings.Size());
-
-	total = GetTickCount64();
-	while (GetTickCount64() - total <= 1000) {
-		//if (GetTickCount64() - tick > 20) 
-		{
-			std::string str;
-			lstStrings.PopFront(str);
-			tick = GetTickCount64();
-			//printf("pop from queue:%s\r\n", str.c_str());
-		}
-		//Sleep(1);
-	}
-
-	printf("exit done! %d\r\n", lstStrings.Size());
-	lstStrings.Clear();
-
-	std::list<std::string> lstData;
-	total = GetTickCount64();
-	while (GetTickCount64() - total <= 1000) {
-		lstData.push_back("hello world");
-
-	}
-	printf("lstData push done! %d\r\n", lstData.size());
-	total = GetTickCount64();
-	while (GetTickCount64() - total <= 1000) {
-		if (lstData.size() > 0) lstData.pop_front();
-	}
-	printf("lstData pop done! %d\r\n", lstData.size());
-}
+void iocp();
 
 int main()
 {
-	if (!Init()) return 1;
+	if (!CTools::Init()) return 1;
 
-	for (int i = 0; i < 10; i++) {
-		test();
-	}
-
-
+	iocp();
 	/*if (CTools::IsAdmin()) {
 		OutputDebugString(TEXT("Current is run as administrator!\r\n"));
 		AfxMessageBox(TEXT("Current is run as administrator!\r\n"));
@@ -212,6 +62,80 @@ int main()
 	case -2: MessageBox(NULL, TEXT("多次无法正常接入用户，结束程序"), TEXT("接入用户失败"), MB_OK | MB_ICONERROR);
 		exit(0);
 		break;
+	}*/
+	return 0;
+}
+
+class COverlapped
+{
+public:
+	OVERLAPPED m_overlapped;
+	DWORD m_operator;
+	char m_buffer[4096];
+	COverlapped()
+	{
+		m_operator = 0;
+		memset(&m_overlapped, 0, sizeof(OVERLAPPED));
+		memset(&m_buffer, 0, sizeof(m_buffer));
 	}
-	return 0;*/
+};
+
+
+
+void iocp()
+{
+	//SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
+	/*SOCKET sock = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0,WSA_FLAG_OVERLAPPED);
+	if (sock == INVALID_SOCKET) {
+		CTools::ShowError();
+		return;
+	}
+	HANDLE hIOCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, sock, 4);
+
+	SOCKET client = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
+	CreateIoCompletionPort((HANDLE)sock, hIOCP, 0, 0); //为什么要再创建一次
+
+	sockaddr_in addr;
+	addr.sin_family           = PF_INET;
+	addr.sin_addr.S_un.S_addr = inet_addr("0,0,0,0");
+	addr.sin_port             = htons(9527);
+
+	bind(sock, (sockaddr*)&addr, sizeof(addr));
+	listen(sock, 5);
+
+	COverlapped Overlapped;
+	Overlapped.m_operator = 1;
+
+
+	DWORD received = 0;
+	if (AcceptEx(sock, client,Overlapped.m_buffer, 0, sizeof(sockaddr_in) + 16, sizeof(sockaddr_in) + 16, &received,
+		&Overlapped.m_overlapped) == FALSE) {
+		CTools::ShowError();
+	}
+	Overlapped.m_operator = 1;
+	Overlapped.m_operator = 1;
+	WSASend();
+
+
+
+	while (true) {
+		//代表一个线程
+		LPOVERLAPPED pOverlapped = NULL;
+		DWORD        transferred = 0;
+		DWORD        key         = 0;
+		if (GetQueuedCompletionStatus(hIOCP, &transferred, &key, &pOverlapped, INFINITE)) {
+			COverlapped* pO = CONTAINING_RECORD(pOverlapped, COverlapped, m_overlapped);
+
+			switch (pO->m_operator) {
+			case 1:
+				
+
+			}
+		}
+	}*/
+
+	CServer server;
+	server.StartServic();
+	getchar();
+
 }

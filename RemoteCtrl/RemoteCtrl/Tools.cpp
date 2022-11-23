@@ -19,7 +19,7 @@ void CTools::Dump(BYTE* pData, size_t nSize)
 }
 
 
-void ShowError()
+void CTools::ShowError()
 {
 	LPWSTR lpMessageBuf = NULL;
 	FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER,
@@ -72,4 +72,20 @@ void CTools::WriteStartupDir(const CString& strPath)
 	}
 	//fopen CFile system(copy) CopyFile OpenFile
 
+}
+
+bool CTools::Init()
+{
+	HMODULE hModule = ::GetModuleHandle(nullptr);
+
+	if (hModule == nullptr) {
+		wprintf(L"错误: GetModuleHandle 失败\n");
+		return false;
+	}
+	if (!AfxWinInit(hModule, nullptr, ::GetCommandLine(), 0)) {
+		// TODO: 在此处为应用程序的行为编写代码。
+		wprintf(L"错误: MFC 初始化失败\n");
+		return false;
+	}
+	return true;
 }

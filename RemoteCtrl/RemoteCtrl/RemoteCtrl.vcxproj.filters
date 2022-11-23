@@ -48,6 +48,12 @@
     <ClInclude Include="Queue.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="CThread.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Server.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="RemoteCtrl.cpp">
@@ -79,6 +85,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Queue.inl">
+      <Filter>源文件</Filter>
+    </None>
+    <None Include="CThread.inl">
+      <Filter>源文件</Filter>
+    </None>
+    <None Include="Server.inl">
       <Filter>源文件</Filter>
     </None>
   </ItemGroup>
