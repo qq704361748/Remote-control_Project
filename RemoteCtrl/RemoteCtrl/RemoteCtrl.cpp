@@ -14,11 +14,11 @@
 #include <fstream>
 #include <conio.h>
 #include "Tools.h"
+#include "Queue.hpp"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
-
 
 
 //#pragma warning(disable:4966)
@@ -31,7 +31,6 @@
 // 唯一的应用程序对象
 
 CWinApp theApp;
-
 
 
 bool Init()
@@ -61,28 +60,29 @@ enum
 
 typedef struct IocpParam
 {
-	int nOperator;
-	std::string strData;
+	int                    nOperator;
+	std::string            strData;
 	_beginthread_proc_type cbFunc; //回调
-	IocpParam(int op,const char* sData,_beginthread_proc_type cb =NULL)
+	IocpParam(int op, const char* sData, _beginthread_proc_type cb = NULL)
 	{
 		nOperator = op;
-		strData = sData;
-		cbFunc = cb;
+		strData   = sData;
+		cbFunc    = cb;
 	}
+
 	IocpParam()
 	{
 		nOperator = -1;
 	}
-}IOCP_PARAM;
+} IOCP_PARAM;
 
 void threadmain(void* arg)
 {
 	std::list<std::string> lstString;
-	DWORD dwTransferred = 0;
-	ULONG_PTR CompletionKey = 0;
-	OVERLAPPED* pOverlapped = NULL;
-	int count = 0, count0 = 0;
+	DWORD                  dwTransferred = 0;
+	ULONG_PTR              CompletionKey = 0;
+	OVERLAPPED*            pOverlapped   = NULL;
+	int                    count         = 0, count0 = 0;
 	while (GetQueuedCompletionStatus(arg, &dwTransferred, &CompletionKey, &pOverlapped, INFINITE)) {
 
 		if (dwTransferred == 0 || CompletionKey == 0) {
@@ -94,8 +94,7 @@ void threadmain(void* arg)
 		if (pParam->nOperator == IocpListPush) {
 			lstString.push_back(pParam->strData);
 			count0++;
-		}
-		else if (pParam->nOperator == IocpListPop) {
+		} else if (pParam->nOperator == IocpListPop) {
 			std::string* pStr = NULL;
 			if (lstString.size() > 0) {
 				pStr = new std::string(lstString.front());
@@ -105,8 +104,7 @@ void threadmain(void* arg)
 				pParam->cbFunc(pStr);
 			}
 			count++;
-		}
-		else if (pParam->nOperator == IocpListEmpty) {
+		} else if (pParam->nOperator == IocpListEmpty) {
 			lstString.clear();
 		}
 
@@ -132,50 +130,61 @@ void func(void* arg)
 	} else {
 		printf("list is empty,no data\r\n");
 	}
-	
+}
+
+
+void test()
+{
+	//printf("press any key to exit ... \r\n");
+	CQueue<std::string> lstStrings;
+
+	ULONGLONG tick0 = GetTickCount64(), tick = GetTickCount64(), total = GetTickCount64();
+
+	while (GetTickCount64() - total <= 1000) {
+		//if (GetTickCount64() - tick0 > 13) 
+		{
+			lstStrings.PushBack("hello world");
+			tick0 = GetTickCount64();
+		}
+	}
+	printf("exit done! %d\r\n", lstStrings.Size());
+
+	total = GetTickCount64();
+	while (GetTickCount64() - total <= 1000) {
+		//if (GetTickCount64() - tick > 20) 
+		{
+			std::string str;
+			lstStrings.PopFront(str);
+			tick = GetTickCount64();
+			//printf("pop from queue:%s\r\n", str.c_str());
+		}
+		//Sleep(1);
+	}
+
+	printf("exit done! %d\r\n", lstStrings.Size());
+	lstStrings.Clear();
+
+	std::list<std::string> lstData;
+	total = GetTickCount64();
+	while (GetTickCount64() - total <= 1000) {
+		lstData.push_back("hello world");
+
+	}
+	printf("lstData push done! %d\r\n", lstData.size());
+	total = GetTickCount64();
+	while (GetTickCount64() - total <= 1000) {
+		if (lstData.size() > 0) lstData.pop_front();
+	}
+	printf("lstData pop done! %d\r\n", lstData.size());
 }
 
 int main()
 {
 	if (!Init()) return 1;
 
-	printf("press any key to exit ... \r\n");
-
-	HANDLE hIOCP = INVALID_HANDLE_VALUE;
-	hIOCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, 1);
-	if (hIOCP == INVALID_HANDLE_VALUE || hIOCP == NULL) {
-		printf("create iocp failed!%d\r\n", GetLastError());
-		return 1;
+	for (int i = 0; i < 10; i++) {
+		test();
 	}
-	HANDLE hThread = (HANDLE)_beginthread(threadQueueEntry, 0, hIOCP);
-
-	ULONGLONG tick = GetTickCount64();
-	ULONGLONG tick0 = GetTickCount64();
-	int count = 0, count0 = 0;
-	while (_kbhit()==0) {
-		if (GetTickCount64() - tick0 > 130) {
-			PostQueuedCompletionStatus(hIOCP, sizeof(IOCP_PARAM), (ULONG_PTR)new IOCP_PARAM(IocpListPop, "hello world",func), NULL);
-			tick0 = GetTickCount64();
-			count++;
-		}
-		if (GetTickCount64() - tick >200) {
-			PostQueuedCompletionStatus(hIOCP, sizeof(IOCP_PARAM), (ULONG_PTR)new IOCP_PARAM(IocpListPush, "hello world"), NULL);
-			tick = GetTickCount64();
-			count0++;
-		}
-		Sleep(1);
-		
-	}
-
-
-	if (hIOCP != NULL) {
-		PostQueuedCompletionStatus(hIOCP, 0, NULL, NULL);
-		WaitForSingleObject(hThread, INFINITE);
-	}
-	CloseHandle(hIOCP);
-
-	printf("exit done! count %d count0 %d \r\n",count,count0);
-	::exit(0);
 
 
 	/*if (CTools::IsAdmin()) {
@@ -205,6 +214,4 @@ int main()
 		break;
 	}
 	return 0;*/
-
 }
-

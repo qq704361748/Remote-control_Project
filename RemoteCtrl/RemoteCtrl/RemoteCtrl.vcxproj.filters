@@ -45,6 +45,9 @@
     <ClInclude Include="Packet.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Queue.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="RemoteCtrl.cpp">
@@ -73,5 +76,10 @@
     <ResourceCompile Include="RemoteCtrl.rc">
       <Filter>资源文件</Filter>
     </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Queue.inl">
+      <Filter>源文件</Filter>
+    </None>
   </ItemGroup>
 </Project>

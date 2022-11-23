@@ -148,6 +148,7 @@
     <ClInclude Include="LockDialog.h" />
     <ClInclude Include="Packet.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="Queue.hpp" />
     <ClInclude Include="RemoteCtrl.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="ServerSocket.h" />
@@ -170,6 +171,9 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="RemoteCtrl.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Queue.inl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
