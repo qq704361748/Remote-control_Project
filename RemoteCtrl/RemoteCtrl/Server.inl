@@ -140,6 +140,7 @@ inline CServer::~CServer()
 	m_client.clear();
 	CloseHandle(m_hIOCP);
 	m_pool.Stop();
+	WSACleanup();
 }
 
 bool CServer::StartServic()
@@ -174,6 +175,8 @@ bool CServer::StartServic()
 
 void CServer::CreateSocket()
 {
+	WSADATA WSAData;
+	WSAStartup(MAKEWORD(2, 2), &WSAData);
 	m_sock = WSASocket(PF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
 	int opt = 1;
 	setsockopt(m_sock, SOL_SOCKET, SO_REUSEADDR, (const char*)&opt,
@@ -191,10 +194,14 @@ bool CServer::NewAccept()
 		sizeof(sockaddr_in) + 16, sizeof(sockaddr_in) + 16,
 		*pClient, *pClient))
 	{
-		closesocket(m_sock);
-		m_sock = INVALID_SOCKET;
-		m_hIOCP = INVALID_HANDLE_VALUE;
-		return false;
+		TRACE("%d\r\n", WSAGetLastError());
+		if(WSAGetLastError()!= WSA_IO_PENDING) {
+			closesocket(m_sock);
+			m_sock = INVALID_SOCKET;
+			m_hIOCP = INVALID_HANDLE_VALUE;
+			return false;
+		}
+		
 	}
 	return true;
 }
