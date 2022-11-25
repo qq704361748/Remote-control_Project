@@ -33,6 +33,7 @@ bool ThreadWorker::IsValid() const
 CThread::CThread()
 {
 	m_hThread = NULL;
+	m_bStatus = false;
 }
 
 CThread::~CThread()
@@ -62,45 +63,58 @@ bool CThread::Stop()
 		return true;
 	}
 	m_bStatus = false;
-	bool ret = WaitForSingleObject(m_hThread, INFINITE) == WAIT_OBJECT_0;
+	DWORD ret = WaitForSingleObject(m_hThread, 1000);
+	if(ret ==WAIT_TIMEOUT) {
+		TerminateThread(m_hThread,-1);
+	}
 	UpdateWorker();
-	return ret;
+	return ret ==WAIT_OBJECT_0;
 }
 
 void CThread::UpdateWorker(const ::ThreadWorker& worker)
 {
-	if (!worker.IsValid()) {
-		m_worker.store(NULL);
-		return;
-	}
-	if (m_worker.load() != NULL) {
+	if ((m_worker.load() != NULL) && (m_worker.load()!=&worker)) {
 		::ThreadWorker* pWorker = m_worker.load();
 		m_worker.store(NULL);
 		delete pWorker;
 	}
+	if (m_worker.load() == &worker) return;
+
+	if (!worker.IsValid()) {
+		m_worker.store(NULL);
+		return;
+	}
+	
 	m_worker.store(new ::ThreadWorker(worker));
 }
 
 bool CThread::IsIdle()
 {
-	return !m_worker.load()->IsValid();
+	if (m_worker.load() == NULL) return true;
+	return!m_worker.load()->IsValid();
 }
 
 
 void CThread::ThreadWorker()
 {
 	while (m_bStatus) {
+		if(m_worker.load() == NULL) {
+			Sleep(1);
+			continue;
+		}
 		::ThreadWorker worker = *m_worker.load();
 		if (worker.IsValid()) {
-			int ret = worker();
-			if (ret != 0) {
-				CString str;
-				str.Format(TEXT("Thread found warning code %d\r\n"), ret);
-				OutputDebugString(str);
-			}
+			if(WaitForSingleObject(m_hThread,0) == WAIT_TIMEOUT) {
+				int ret = worker();
+				if (ret != 0) {
+					CString str;
+					str.Format(TEXT("Thread found warning code %d\r\n"), ret);
+					OutputDebugString(str);
+				}
 
-			if (ret < 0) {
-				m_worker.store(NULL);
+				if (ret < 0) {
+					m_worker.store(NULL);
+				}
 			}
 		}
 		else {
@@ -129,6 +143,10 @@ ThreadPool::ThreadPool(size_t size)
 ThreadPool::~ThreadPool()
 {
 	Stop();
+	for (size_t i = 0; i < m_threads.size(); i++) {
+		delete m_threads[i];
+		m_threads[i] = NULL;
+	}
 	m_threads.clear();
 }
 

@@ -2,7 +2,7 @@
 #include <map>
 #include <MSWSock.h>
 
-#include "CThread.h"
+#include "CThread.hpp"
 #include "Queue.hpp"
 
 #pragma warning(disable:4407)
@@ -31,6 +31,7 @@ public:
 	CServer*          m_server; //服务器对象
 	PCLIENT           m_client; //对应的客户端
 	WSABUF            m_wsabuffer;
+	virtual  ~KOverlapped();
 };
 
 template <Koperator>
@@ -46,13 +47,13 @@ class SendOverlapped;
 typedef SendOverlapped<KSend> SENDOVERLAPPED;
 
 
-class CClient
+class CClient:public ThreadFuncBase
 {
 public:
 	CClient();
 	~CClient();
 
-	inline void SetOverlapped(PCLIENT& ptr);
+	void SetOverlapped(PCLIENT& ptr);
 
 	operator SOCKET();
 	operator PVOID();
@@ -68,6 +69,8 @@ public:
 	size_t       GetBufferSize() const;
 
 	int Recv();
+	int Send(void* buffer, size_t nSize);
+	int SendData(std::vector<char>& data);
 private:
 	SOCKET                            m_sock;
 	DWORD                             m_received;
@@ -81,6 +84,7 @@ private:
 	sockaddr_in       m_laddr;
 	sockaddr_in       m_raddr;
 	bool              m_isbusy;
+	KSendQueue<std::vector<char>> m_vecSend;  //发送数据队列
 };
 
 
@@ -92,7 +96,7 @@ public:
 
 	int AcceptWorker();
 
-	PCLIENT m_client;
+	//PCLIENT m_client;
 };
 
 
@@ -112,6 +116,9 @@ class SendOverlapped : public KOverlapped, ThreadFuncBase
 public:
 	SendOverlapped();
 
+	/**
+	 * 1.Send可能不会立即完成
+	 */
 	int SendWorker();
 };
 

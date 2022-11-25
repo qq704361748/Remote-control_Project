@@ -4,9 +4,8 @@
 #include <mutex>
 
 class ThreadFuncBase{};
-
-
 typedef int (ThreadFuncBase::* FUNCTYPE)();
+
 class ThreadWorker
 {
 public:

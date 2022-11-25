@@ -1,3 +1,6 @@
+#include "Queue.hpp"
+#include "Queue.hpp"
+
 template <class T>
 CQueue<T>::CQueue()
 {
@@ -178,3 +181,101 @@ void CQueue<T>::DealParam(PPARAM* pParam)
 		OutputDebugString(TEXT("unknown operator!\r\n"));
 	}
 }
+
+template<class T>
+inline KSendQueue<T>::KSendQueue(ThreadFuncBase* obj, KCALLBACK callback)
+:CQueue<T>(),m_base(obj),m_callback(callback)
+{
+	m_thread.Start();
+	m_thread.UpdateWorker(::ThreadWorker(this, (FUNCTYPE) & KSendQueue<T>::threadTick));
+}
+
+template <class T>
+KSendQueue<T>::~KSendQueue()
+{
+	m_base = NULL;
+	m_callback = NULL;
+	m_thread.Stop();
+}
+
+
+template <class T>
+bool KSendQueue<T>::PopFront(T& data)
+{
+	return false;
+}
+
+template <class T>
+bool KSendQueue<T>::PopFront()
+{
+	typename CQueue<T>::IocpParam* Param = new typename CQueue<T>::IocpParam(CQueue<T>::QPop, T());
+
+	if (CQueue<T>::m_lock) {
+		delete Param;
+		return false;
+	}
+
+	bool ret = PostQueuedCompletionStatus(CQueue<T>::m_hCompletionPort, sizeof(*Param), (ULONG_PTR)&Param, NULL);
+
+	if (ret == false) {
+		delete Param;
+		return false;
+	}
+	return ret;
+}
+
+template <class T>
+int KSendQueue<T>::threadTick()
+{
+	if (WaitForSingleObject(CQueue<T>::m_hThread, 0) != WAIT_TIMEOUT) return 0;
+	if(CQueue<T>::m_lstData.size()>0 ) {
+		PopFront();
+	}
+	//Sleep(1);
+	return 0;
+
+}
+
+template <class T>
+void KSendQueue<T>::DealParam(typename CQueue<T>::PPARAM* pParam)
+{
+	switch (pParam->nOperator) {
+
+	case CQueue<T>::QPush:
+	{
+		CQueue<T>::m_lstData.push_back(pParam->Data);
+		delete pParam;
+	}
+	break;
+	case CQueue<T>::QPop:
+	{
+		if (CQueue<T>::m_lstData.size() > 0) {
+			pParam->Data = CQueue<T>::m_lstData.front();
+			if((m_base->*m_callback)(pParam->Data) == 0)
+				CQueue<T>::m_lstData.pop_front();
+		}
+		delete pParam;
+	}
+	break;
+	case CQueue<T>::Qsize:
+	{
+		pParam->nOperator = CQueue<T>::m_lstData.size();
+		if (pParam->hEvent != NULL) {
+			SetEvent(pParam->hEvent);
+		}
+	}
+	break;
+	case CQueue<T>::QClear:
+	{
+		CQueue<T>::m_lstData.clear();
+		delete pParam;
+	}
+	break;
+	default:
+		OutputDebugString(TEXT("unknown operator!\r\n"));
+	}
+
+
+
+}
+

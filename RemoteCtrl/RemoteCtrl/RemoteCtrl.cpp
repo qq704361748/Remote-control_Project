@@ -12,7 +12,7 @@
 #include "Tools.h"
 #include "Queue.hpp"
 #include <MSWSock.h>
-#include "Server.h"
+#include "Server.hpp"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW

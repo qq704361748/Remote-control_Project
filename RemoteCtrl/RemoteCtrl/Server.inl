@@ -1,10 +1,18 @@
-#include "Server.h"
+#include "Server.hpp"
+
+inline KOverlapped::~KOverlapped()
+{
+	m_buffer.clear();
+
+
+}
 
 CClient::CClient()
 	: m_isbusy(false), m_flags(0),
 	m_overlapped(new ACCEPTOVERLAPPED()),
 	m_recv(new RECVOVERLAPPED()),
-	m_send(new SENDOVERLAPPED())
+	m_send(new SENDOVERLAPPED()),
+	m_vecSend(this,(SENDCALLBACK)& CClient::SendData)
 
 {
 	m_sock = WSASocket(PF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
@@ -15,12 +23,19 @@ CClient::CClient()
 
 CClient::~CClient()
 {
+	m_buffer.clear();
 	closesocket(m_sock);
+	m_recv.reset();
+	m_send.reset();
+	m_overlapped.reset();
+	m_vecSend.Clear();
 }
 
 void CClient::SetOverlapped(PCLIENT& ptr)
 {
 	m_overlapped->m_client = ptr;
+	m_recv->m_client = ptr;
+	m_send->m_client = ptr;
 }
 
 CClient::operator SOCKET()
@@ -82,6 +97,29 @@ int CClient::Recv()
 	return 0;
 }
 
+inline int CClient::Send(void* buffer, size_t nSize)
+{
+	std::vector<char> data(nSize);
+	memcpy(data.data(), buffer, nSize);
+	if(m_vecSend.PushBack(data)) {
+		return 0;
+	}
+	return -1;
+}
+
+inline int CClient::SendData(std::vector<char>& data)
+{
+	if(m_vecSend.Size() >0) {
+		int ret = WSASend(m_sock, SendWSABuffer(), 1, &m_received,
+			m_flags, &m_send->m_overlapped, NULL);
+		if(ret!=0 && (WSAGetLastError() != WSA_IO_PENDING)) {
+			CTools::ShowError();
+			return -1;
+		}
+	}
+	return 0;
+}
+
 
 CServer::CServer(const std::string& ip, short port) : m_pool(10)
 {
@@ -92,7 +130,17 @@ CServer::CServer(const std::string& ip, short port) : m_pool(10)
 	m_addr.sin_port = htons(port);
 }
 
-inline CServer::~CServer() {}
+inline CServer::~CServer()
+{
+	closesocket(m_sock);
+	std::map<SOCKET, PCLIENT>::iterator it = m_client.begin();
+	for (;it != m_client.end();it++) {
+		it->second.reset();
+	}
+	m_client.clear();
+	CloseHandle(m_hIOCP);
+	m_pool.Stop();
+}
 
 bool CServer::StartServic()
 {
@@ -263,6 +311,9 @@ SendOverlapped<op>::SendOverlapped()
 template <Koperator op>
 int SendOverlapped<op>::SendWorker() {
 	//TODO:
+
+
+
 	return -1;
 }
 
