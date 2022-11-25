@@ -1,5 +1,11 @@
+#include "Server.h"
 
-CClient::CClient() : m_isbusy(false), m_overlapped(new ACCEPTOVERLAPPED())
+CClient::CClient()
+	: m_isbusy(false), m_flags(0),
+	m_overlapped(new ACCEPTOVERLAPPED()),
+	m_recv(new RECVOVERLAPPED()),
+	m_send(new SENDOVERLAPPED())
+
 {
 	m_sock = WSASocket(PF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
 	m_buffer.resize(1024);
@@ -37,6 +43,21 @@ CClient::operator LPDWORD()
 	return &m_received;
 }
 
+inline LPWSABUF CClient::RecvWSABuffer()
+{
+	return &m_recv->m_wsabuffer;
+}
+
+inline LPWSABUF CClient::SendWSABuffer()
+{
+	return &m_send->m_wsabuffer;
+}
+
+inline DWORD& CClient::flags()
+{
+	return m_flags;
+}
+
 sockaddr_in* CClient::GetLoaclAddr()
 {
 	return &m_laddr;
@@ -45,6 +66,20 @@ sockaddr_in* CClient::GetLoaclAddr()
 sockaddr_in* CClient::GetRemoteAddr()
 {
 	return &m_raddr;
+}
+
+inline size_t CClient::GetBufferSize() const
+{
+	return m_buffer.size();
+}
+
+int CClient::Recv()
+{
+	int ret = recv(m_sock, m_buffer.data()+ m_used, m_buffer.size()- m_used, 0);
+	if(ret <= 0 )return -1;
+	m_used += (size_t)ret;
+	//TODO:解析数据
+	return 0;
 }
 
 
@@ -160,3 +195,90 @@ int CServer::threadIocp()
 	}
 	return 0;
 }
+
+
+/************************************************************/
+/************************************************************/
+/************************************************************/
+
+template<Koperator op>
+AcceptOverlapped<op>::AcceptOverlapped()
+{
+	m_operator = KAccept;
+	m_worker = ThreadWorker(this, (FUNCTYPE)&AcceptOverlapped<op>::AcceptWorker);
+	memset(&m_overlapped, 0, sizeof(m_overlapped));
+	m_buffer.resize(1024);
+	m_server = NULL;
+}
+
+template<Koperator op>
+int AcceptOverlapped<op>::AcceptWorker()
+{
+	INT lLength = 0, rLength = 0;
+	if (*(LPDWORD)*m_client.get() > 0) {
+		GetAcceptExSockaddrs(*m_client, 0, sizeof(sockaddr_in) + 16,
+			sizeof(sockaddr_in) + 16, (sockaddr**)m_client->GetLoaclAddr(), &lLength,
+			(sockaddr**)m_client->GetRemoteAddr(), &rLength);
+
+		
+
+		int ret = WSARecv((SOCKET)*m_client, m_client->RecvWSABuffer(), 1,
+			*m_client, &m_client->flags(), *m_client, NULL);
+		if(ret == SOCKET_ERROR && (WSAGetLastError()!=WSA_IO_PENDING)) {
+			//TODO:报错
+		}
+
+		if (!m_server->NewAccept())
+		{
+			return -2;
+		}
+	}
+	return -1;
+}
+
+template <Koperator op>
+RecvOverlapped<op>::RecvOverlapped()
+{
+	m_operator = KRecv;
+	m_worker = ThreadWorker(this, (FUNCTYPE)&RecvOverlapped<op>::RecvWorker);
+	memset(&m_overlapped, 0, sizeof(m_overlapped));
+	m_buffer.resize(1024*265);
+}
+
+template <Koperator op>
+int RecvOverlapped<op>::RecvWorker() {
+	int ret = m_client->Recv();
+	return ret;
+}
+
+template <Koperator op>
+SendOverlapped<op>::SendOverlapped()
+{
+	m_operator = KSend;
+	m_worker = ThreadWorker(this, (FUNCTYPE)&SendOverlapped<op>::SendWorker);
+	memset(&m_overlapped, 0, sizeof(m_overlapped));
+	m_buffer.resize(1024*256);
+}
+
+template <Koperator op>
+int SendOverlapped<op>::SendWorker() {
+	//TODO:
+	return -1;
+}
+
+template <Koperator op>
+ErrorOverlapped<op>::ErrorOverlapped()
+{
+	m_operator = KError;
+	m_worker = ThreadWorker(this, (FUNCTYPE)&ErrorOverlapped<op>::ErrorWorker);
+	memset(&m_overlapped, 0, sizeof(m_overlapped));
+	m_buffer.resize(1024);
+}
+
+template <Koperator E0>
+int ErrorOverlapped<E0>::ErrorWorker() {
+	//TODO:
+	return -1;
+}
+
+

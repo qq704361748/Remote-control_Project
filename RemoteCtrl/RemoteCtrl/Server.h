@@ -24,16 +24,27 @@ typedef std::shared_ptr<CClient> PCLIENT;
 class KOverlapped
 {
 public:
-	OVERLAPPED m_overlapped;
-	DWORD m_operator;  //操作 
+	OVERLAPPED        m_overlapped;
+	DWORD             m_operator; //操作 
 	std::vector<char> m_buffer;
-	ThreadWorker m_worker;  //处理函数
-	CServer* m_server; //服务器对象
+	ThreadWorker      m_worker; //处理函数
+	CServer*          m_server; //服务器对象
+	PCLIENT           m_client; //对应的客户端
+	WSABUF            m_wsabuffer;
 };
 
-template<Koperator>
+template <Koperator>
 class AcceptOverlapped;
 typedef AcceptOverlapped<KAccept> ACCEPTOVERLAPPED;
+
+template <Koperator>
+class RecvOverlapped;
+typedef RecvOverlapped<KRecv> RECVOVERLAPPED;
+
+template <Koperator>
+class SendOverlapped;
+typedef SendOverlapped<KSend> SENDOVERLAPPED;
+
 
 class CClient
 {
@@ -41,33 +52,43 @@ public:
 	CClient();
 	~CClient();
 
-	void  SetOverlapped(PCLIENT& ptr);
+	inline void SetOverlapped(PCLIENT& ptr);
 
 	operator SOCKET();
 	operator PVOID();
 	operator LPOVERLAPPED();
 	operator LPDWORD();
+	LPWSABUF RecvWSABuffer();
+	LPWSABUF SendWSABuffer();
+
+	DWORD& flags();
 
 	sockaddr_in* GetLoaclAddr();
 	sockaddr_in* GetRemoteAddr();
+	size_t       GetBufferSize() const;
+
+	int Recv();
 private:
-	SOCKET m_sock;
-	DWORD m_received;
+	SOCKET                            m_sock;
+	DWORD                             m_received;
+	DWORD                             m_flags;
 	std::shared_ptr<ACCEPTOVERLAPPED> m_overlapped;
+	std::shared_ptr<RECVOVERLAPPED>   m_recv;
+	std::shared_ptr<SENDOVERLAPPED>   m_send;
+
 	std::vector<char> m_buffer;
-	sockaddr_in m_laddr;
-	sockaddr_in m_raddr;
-	bool m_isbusy;
+	size_t            m_used; //已使用缓冲区大小
+	sockaddr_in       m_laddr;
+	sockaddr_in       m_raddr;
+	bool              m_isbusy;
 };
 
 
-
-template<Koperator>
-class AcceptOverlapped: public KOverlapped,ThreadFuncBase
+template <Koperator>
+class AcceptOverlapped : public KOverlapped, ThreadFuncBase
 {
 public:
 	AcceptOverlapped();
-
 
 	int AcceptWorker();
 
@@ -75,105 +96,62 @@ public:
 };
 
 
-template<Koperator>
+template <Koperator>
 class RecvOverlapped : public KOverlapped, ThreadFuncBase
 {
 public:
-	RecvOverlapped() :m_operator(KRecv), m_worker(this, &RecvOverlapped::RecvWorker)
-	{
-		memset(&m_overlapped, 0, sizeof(m_overlapped));
-		m_buffer.resize(1024*265);
-	}
-	int RecvWorker()
-	{
-		//TODO:
-	}
-};
-typedef RecvOverlapped<KRecv> RECVOVERLAPPED;
+	RecvOverlapped();
 
-template<Koperator>
+	int RecvWorker();
+};
+
+
+template <Koperator>
 class SendOverlapped : public KOverlapped, ThreadFuncBase
 {
 public:
-	SendOverlapped() :m_operator(KSend), m_worker(this, &SendOverlapped::SendWorker)
-	{
-		memset(&m_overlapped, 0, sizeof(m_overlapped));
-		m_buffer.resize(1024*256);
-	}
-	int SendWorker()
-	{
-		//TODO:
-	}
+	SendOverlapped();
+
+	int SendWorker();
 };
+
 typedef SendOverlapped<KSend> SENDOVERLAPPED;
 
-template<Koperator>
+template <Koperator>
 class ErrorOverlapped : public KOverlapped, ThreadFuncBase
 {
 public:
-	ErrorOverlapped():m_operator(KError),m_worker(this, &ErrorOverlapped::ErrorWorker)
-	{
-		memset(&m_overlapped, 0, sizeof(m_overlapped));
-		m_buffer.resize(1024);
-	}
-	int ErrorWorker()
-	{
-		//TODO:
-	}
+	ErrorOverlapped();
+
+	int ErrorWorker();
 };
+
 typedef ErrorOverlapped<KAccept> ERROROVERLAPPED;
 
 
-
-class CServer:public ThreadFuncBase
+class CServer : public ThreadFuncBase
 {
 public:
-	CServer(const std::string& ip="0,0,0,0",short port = 9527);
+	CServer(const std::string& ip = "0,0,0,0", short port = 9527);
 	~CServer();
 
 	bool StartServic();
 
 	bool NewAccept();
 
+
 private:
 	void CreateSocket();
-	
+
 	int threadIocp();
 
 
 private:
-	ThreadPool m_pool;
-	HANDLE m_hIOCP;
-	SOCKET m_sock;
-	sockaddr_in m_addr;
-	std::map<SOCKET,std::shared_ptr<CClient>> m_client;
+	ThreadPool                                 m_pool;
+	HANDLE                                     m_hIOCP;
+	SOCKET                                     m_sock;
+	sockaddr_in                                m_addr;
+	std::map<SOCKET, std::shared_ptr<CClient>> m_client;
 };
 
 #include "Server.inl"
-
-template<Koperator op>
-int AcceptOverlapped<op>::AcceptWorker()
-{
-	INT lLength = 0, rLength = 0;
-	if (*(LPDWORD)*m_client.get() > 0) {
-		GetAcceptExSockaddrs(*m_client, 0, sizeof(sockaddr_in) + 16,
-			sizeof(sockaddr_in) + 16, (sockaddr**)m_client->GetLoaclAddr(), &lLength,
-			(sockaddr**)m_client->GetRemoteAddr(), &rLength);
-
-		if (!m_server->NewAccept())
-		{
-			return -2;
-		}
-	}
-	return -1;
-}
-
-template<Koperator op>
-AcceptOverlapped<op>::AcceptOverlapped()
-{
-	m_operator = KAccept;
-	m_worker = ThreadWorker(this, (FUNCTYPE)&AcceptOverlapped<op>::AcceptWorker);
-	memset(&m_overlapped, 0, sizeof(m_overlapped));
-	m_buffer.resize(1024);
-	m_server = NULL;
-}
