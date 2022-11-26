@@ -192,7 +192,7 @@ BOOL CRemoteClientDlg::OnInitDialog()
 
 	// TODO: 在此添加额外的初始化代码
 	UpdateData();
-	m_server_address = 0xC0A85F8B; // 0x7F000001
+	m_server_address = 0x7F000001; // 0x7F000001   0xC0A85F8B
 	m_nPort          = TEXT("9527");
 	UpdateData(FALSE);
 
@@ -515,9 +515,11 @@ void CRemoteClientDlg::OnEnChangeEditPort()
 LRESULT CRemoteClientDlg::OnSendPackAck(WPARAM wParam, LPARAM lParam)
 {
 	if (lParam == -1 || (lParam == -2)) {
+		TRACE("socket is error %d\r\n", lParam);
 		//TODO:错误处理
 	} else if (lParam == 1) {
 		//对方关闭了套接字
+		TRACE("socket is closed %d\r\n");
 	} else {
 		CPacket* pPacket = (CPacket*)wParam;
 		if (pPacket != NULL) {

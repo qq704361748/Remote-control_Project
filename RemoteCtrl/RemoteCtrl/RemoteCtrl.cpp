@@ -84,56 +84,6 @@ public:
 
 void iocp()
 {
-	//SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
-	/*SOCKET sock = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0,WSA_FLAG_OVERLAPPED);
-	if (sock == INVALID_SOCKET) {
-		CTools::ShowError();
-		return;
-	}
-	HANDLE hIOCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, sock, 4);
-
-	SOCKET client = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
-	CreateIoCompletionPort((HANDLE)sock, hIOCP, 0, 0); //为什么要再创建一次
-
-	sockaddr_in addr;
-	addr.sin_family           = PF_INET;
-	addr.sin_addr.S_un.S_addr = inet_addr("0,0,0,0");
-	addr.sin_port             = htons(9527);
-
-	bind(sock, (sockaddr*)&addr, sizeof(addr));
-	listen(sock, 5);
-
-	COverlapped Overlapped;
-	Overlapped.m_operator = 1;
-
-
-	DWORD received = 0;
-	if (AcceptEx(sock, client,Overlapped.m_buffer, 0, sizeof(sockaddr_in) + 16, sizeof(sockaddr_in) + 16, &received,
-		&Overlapped.m_overlapped) == FALSE) {
-		CTools::ShowError();
-	}
-	Overlapped.m_operator = 1;
-	Overlapped.m_operator = 1;
-	WSASend();
-
-
-
-	while (true) {
-		//代表一个线程
-		LPOVERLAPPED pOverlapped = NULL;
-		DWORD        transferred = 0;
-		DWORD        key         = 0;
-		if (GetQueuedCompletionStatus(hIOCP, &transferred, &key, &pOverlapped, INFINITE)) {
-			COverlapped* pO = CONTAINING_RECORD(pOverlapped, COverlapped, m_overlapped);
-
-			switch (pO->m_operator) {
-			case 1:
-				
-
-			}
-		}
-	}*/
-
 	CServer server;
 	server.StartServic();
 	getchar();

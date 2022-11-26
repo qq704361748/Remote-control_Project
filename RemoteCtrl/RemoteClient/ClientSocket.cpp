@@ -1,7 +1,6 @@
 #include "pch.h"
 #include "ClientSocket.h"
 
-
 //ClientSocket server;
 
 CClientSocket* CClientSocket::m_instance = NULL;
@@ -48,6 +47,7 @@ string GetErrorInfo(int wsaErrCode)
 	              (LPTSTR)&lpMsgBuf,
 	              0, NULL
 	             );
+
 	ret = (char*)lpMsgBuf;
 	LocalFree(lpMsgBuf);
 	return ret;
@@ -370,10 +370,10 @@ unsigned __stdcall CClientSocket::threadEntry(void* arg)
 
 void CClientSocket::threadFunc2()
 {
+	SetEvent(m_eventInvoke);
 	MSG msg;
 	while (::GetMessage(&msg, NULL, 0, 0))
 	{
-		SetEvent(m_eventInvoke);
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 

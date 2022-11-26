@@ -1,5 +1,6 @@
 #include "Server.hpp"
 
+
 inline KOverlapped::~KOverlapped()
 {
 	m_buffer.clear();
@@ -33,9 +34,9 @@ CClient::~CClient()
 
 void CClient::SetOverlapped(PCLIENT& ptr)
 {
-	m_overlapped->m_client = ptr;
-	m_recv->m_client = ptr;
-	m_send->m_client = ptr;
+	m_overlapped->m_client = ptr.get();
+	m_recv->m_client = ptr.get();
+	m_send->m_client = ptr.get();
 }
 
 CClient::operator SOCKET()
@@ -63,9 +64,19 @@ inline LPWSABUF CClient::RecvWSABuffer()
 	return &m_recv->m_wsabuffer;
 }
 
+inline LPWSAOVERLAPPED CClient::RecvOverlapped()
+{
+	return &m_recv->m_overlapped;
+}
+
 inline LPWSABUF CClient::SendWSABuffer()
 {
 	return &m_send->m_wsabuffer;
+}
+
+inline LPWSAOVERLAPPED CClient::SendOverlapped()
+{
+	return &m_send->m_overlapped;
 }
 
 inline DWORD& CClient::flags()
@@ -88,12 +99,13 @@ inline size_t CClient::GetBufferSize() const
 	return m_buffer.size();
 }
 
-int CClient::Recv()
+inline int CClient::Recv()
 {
 	int ret = recv(m_sock, m_buffer.data()+ m_used, m_buffer.size()- m_used, 0);
 	if(ret <= 0 )return -1;
 	m_used += (size_t)ret;
 	//TODO:解析数据
+	CTools::Dump((BYTE*)m_buffer.data(), ret);
 	return 0;
 }
 
@@ -123,6 +135,7 @@ inline int CClient::SendData(std::vector<char>& data)
 
 CServer::CServer(const std::string& ip, short port) : m_pool(10)
 {
+	
 	m_hIOCP = INVALID_HANDLE_VALUE;
 	m_sock = INVALID_SOCKET;
 	m_addr.sin_family = AF_INET;
@@ -206,6 +219,11 @@ bool CServer::NewAccept()
 	return true;
 }
 
+inline void CServer::BindNewSocket(SOCKET s)
+{
+	CreateIoCompletionPort((HANDLE)s, m_hIOCP, (ULONG_PTR)this, 0);
+}
+
 int CServer::threadIocp()
 {
 	DWORD       transferred = 0;
@@ -213,9 +231,12 @@ int CServer::threadIocp()
 	OVERLAPPED* lpOverlapped = NULL;
 	if (GetQueuedCompletionStatus(m_hIOCP, &transferred, &CompletionKey,
 		&lpOverlapped, INFINITE)) {
-		if (transferred > 0 && CompletionKey != 0) {
+		if (CompletionKey != 0) {
 			auto* pOverlapped = CONTAINING_RECORD(lpOverlapped, KOverlapped,
 				m_overlapped);
+			TRACE("pOverlapped->m_operator %d \r\n", pOverlapped->m_operator);
+
+			pOverlapped->m_server = this;
 			switch (pOverlapped->m_operator) {
 			case KAccept:
 			{
@@ -270,17 +291,21 @@ template<Koperator op>
 int AcceptOverlapped<op>::AcceptWorker()
 {
 	INT lLength = 0, rLength = 0;
-	if (*(LPDWORD)*m_client.get() > 0) {
+	if (m_client->GetBufferSize() > 0) {
+		sockaddr* plocal = NULL, * premote = NULL;
 		GetAcceptExSockaddrs(*m_client, 0, sizeof(sockaddr_in) + 16,
-			sizeof(sockaddr_in) + 16, (sockaddr**)m_client->GetLoaclAddr(), &lLength,
-			(sockaddr**)m_client->GetRemoteAddr(), &rLength);
+			sizeof(sockaddr_in) + 16, (sockaddr**)&plocal, &lLength,
+			(sockaddr**)&premote, &rLength);
 
-		
+		memcpy(m_client->GetLoaclAddr(), plocal, sizeof(sockaddr_in));
+		memcpy(m_client->GetRemoteAddr(), premote, sizeof(sockaddr_in));
+		m_server->BindNewSocket(*m_client);
 
 		int ret = WSARecv((SOCKET)*m_client, m_client->RecvWSABuffer(), 1,
-			*m_client, &m_client->flags(), *m_client, NULL);
+			*m_client, &m_client->flags(), m_client->RecvOverlapped(), NULL);
 		if(ret == SOCKET_ERROR && (WSAGetLastError()!=WSA_IO_PENDING)) {
 			//TODO:报错
+			TRACE("ret = %d error = %d\r\n", ret, WSAGetLastError());
 		}
 
 		if (!m_server->NewAccept())
@@ -333,8 +358,8 @@ ErrorOverlapped<op>::ErrorOverlapped()
 	m_buffer.resize(1024);
 }
 
-template <Koperator E0>
-int ErrorOverlapped<E0>::ErrorWorker() {
+template <Koperator op>
+int ErrorOverlapped<op>::ErrorWorker() {
 	//TODO:
 	return -1;
 }

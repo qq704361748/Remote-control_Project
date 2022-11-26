@@ -10,7 +10,7 @@ class ThreadWorker
 {
 public:
 	ThreadWorker() ;
-	ThreadWorker(ThreadFuncBase* obj, FUNCTYPE f);
+	ThreadWorker(void* obj, FUNCTYPE f);
 	ThreadWorker(const ThreadWorker& worker) ;
 	ThreadWorker& operator=(const ThreadWorker& worker) ;
 
@@ -54,7 +54,7 @@ class ThreadPool
 {
 public:
 	ThreadPool(size_t size);
-	ThreadPool();
+	ThreadPool() = default;
 	~ThreadPool();
 
 	bool Invoke();

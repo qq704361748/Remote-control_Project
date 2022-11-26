@@ -1,6 +1,6 @@
 ThreadWorker::ThreadWorker() : thiz(NULL), func(NULL) {}
 
-ThreadWorker::ThreadWorker(ThreadFuncBase* obj, FUNCTYPE f) : thiz(obj), func(f) {}
+ThreadWorker::ThreadWorker(void* obj, FUNCTYPE f) : thiz((ThreadFuncBase*)obj), func(f) {}
 
 ThreadWorker::ThreadWorker(const ThreadWorker& worker)
 {
@@ -75,6 +75,7 @@ void CThread::UpdateWorker(const ::ThreadWorker& worker)
 {
 	if ((m_worker.load() != NULL) && (m_worker.load()!=&worker)) {
 		::ThreadWorker* pWorker = m_worker.load();
+		TRACE("deletepWorker = %08X m_worker=%08X\r\n", pWorker, m_worker.load());
 		m_worker.store(NULL);
 		delete pWorker;
 	}
@@ -84,14 +85,15 @@ void CThread::UpdateWorker(const ::ThreadWorker& worker)
 		m_worker.store(NULL);
 		return;
 	}
-	
+	::ThreadWorker* pWorker = new ::ThreadWorker(worker);
+	TRACE("new pWorker = %08X m_worker=%08X\r\n", pWorker, m_worker.load());
 	m_worker.store(new ::ThreadWorker(worker));
 }
 
 bool CThread::IsIdle()
 {
 	if (m_worker.load() == NULL) return true;
-	return!m_worker.load()->IsValid();
+	return !m_worker.load()->IsValid();
 }
 
 
@@ -113,7 +115,9 @@ void CThread::ThreadWorker()
 				}
 
 				if (ret < 0) {
+					::ThreadWorker* pWorker = m_worker.load();
 					m_worker.store(NULL);
+					delete pWorker;
 				}
 			}
 		}

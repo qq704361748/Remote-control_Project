@@ -19,7 +19,7 @@ enum Koperator
 
 class CServer;
 class CClient;
-typedef std::shared_ptr<CClient> PCLIENT;
+typedef std::shared_ptr<CClient>PCLIENT;
 
 class KOverlapped
 {
@@ -29,7 +29,7 @@ public:
 	std::vector<char> m_buffer;
 	ThreadWorker      m_worker; //处理函数
 	CServer*          m_server; //服务器对象
-	PCLIENT           m_client; //对应的客户端
+	CClient*           m_client; //对应的客户端
 	WSABUF            m_wsabuffer;
 	virtual  ~KOverlapped();
 };
@@ -59,8 +59,11 @@ public:
 	operator PVOID();
 	operator LPOVERLAPPED();
 	operator LPDWORD();
+
 	LPWSABUF RecvWSABuffer();
+	LPWSAOVERLAPPED RecvOverlapped();
 	LPWSABUF SendWSABuffer();
+	LPWSAOVERLAPPED SendOverlapped();
 
 	DWORD& flags();
 
@@ -139,13 +142,13 @@ typedef ErrorOverlapped<KAccept> ERROROVERLAPPED;
 class CServer : public ThreadFuncBase
 {
 public:
-	CServer(const std::string& ip = "0,0,0,0", short port = 9527);
+	CServer(const std::string& ip = "0.0.0.0", short port = 9527);
 	~CServer();
 
 	bool StartServic();
 
 	bool NewAccept();
-
+	void BindNewSocket(SOCKET s);
 
 private:
 	void CreateSocket();
