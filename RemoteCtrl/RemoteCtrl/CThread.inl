@@ -30,6 +30,10 @@ bool ThreadWorker::IsValid() const
 	return (thiz != NULL) && (func != NULL);
 }
 
+
+
+
+
 CThread::CThread()
 {
 	m_hThread = NULL;
@@ -85,9 +89,10 @@ void CThread::UpdateWorker(const ::ThreadWorker& worker)
 		m_worker.store(NULL);
 		return;
 	}
-	::ThreadWorker* pWorker = new ::ThreadWorker(worker);
-	TRACE("new pWorker = %08X m_worker=%08X\r\n", pWorker, m_worker.load());
+	/*::ThreadWorker* pWorker = new ::ThreadWorker(worker);
+	TRACE("new pWorker = %08X m_worker=%08X\r\n", pWorker, m_worker.load());*/
 	m_worker.store(new ::ThreadWorker(worker));
+	// delete pWorker;
 }
 
 bool CThread::IsIdle()
@@ -107,7 +112,7 @@ void CThread::ThreadWorker()
 		::ThreadWorker worker = *m_worker.load();
 		if (worker.IsValid()) {
 			if(WaitForSingleObject(m_hThread,0) == WAIT_TIMEOUT) {
-				int ret = worker();
+				int ret = worker();  //重载括号，仿函数，使该线程进行工作
 				if (ret != 0) {
 					CString str;
 					str.Format(TEXT("Thread found warning code %d\r\n"), ret);
@@ -163,7 +168,7 @@ bool ThreadPool::Invoke()
 			break;
 		}
 	}
-	if (ret = false) {
+	if (ret == false) {
 		for (size_t i = 0; i < m_threads.size(); i++) {
 			m_threads[i]->Stop();
 		}
@@ -183,10 +188,11 @@ int ThreadPool::DispatchWorker(const ThreadWorker& worker)
 	int index = -1;
 	m_lock.lock();
 	for (size_t i = 0; i < m_threads.size(); i++) {
-		m_threads[i]->IsIdle();
-		m_threads[i]->UpdateWorker(worker);
-		index = i;
-		break;
+		if(m_threads[i]->IsIdle()) {
+			m_threads[i]->UpdateWorker(worker);
+			index = i;
+			break;
+		}
 	}
 	m_lock.unlock();
 	return index;

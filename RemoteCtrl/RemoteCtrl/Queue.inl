@@ -1,6 +1,3 @@
-#include "Queue.hpp"
-#include "Queue.hpp"
-
 template <class T>
 CQueue<T>::CQueue()
 {

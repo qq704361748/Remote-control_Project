@@ -180,8 +180,9 @@ bool CServer::StartServic()
 	CreateIoCompletionPort((HANDLE)m_sock, m_hIOCP, (ULONG_PTR)this, 0);
 	m_pool.Invoke();
 	m_pool.DispatchWorker(ThreadWorker(this, (FUNCTYPE)&CServer::threadIocp));
-	if (!NewAccept()) return false;
 
+
+	if (!NewAccept()) return false;
 	return true;
 
 }
@@ -205,7 +206,7 @@ bool CServer::NewAccept()
 
 	if (!AcceptEx(m_sock, *pClient, *pClient, 0,
 		sizeof(sockaddr_in) + 16, sizeof(sockaddr_in) + 16,
-		*pClient, *pClient))
+		*pClient, *pClient))  //建立连接以获得本地地址和远程地址
 	{
 		TRACE("%d\r\n", WSAGetLastError());
 		if(WSAGetLastError()!= WSA_IO_PENDING) {
@@ -295,7 +296,7 @@ int AcceptOverlapped<op>::AcceptWorker()
 		sockaddr* plocal = NULL, * premote = NULL;
 		GetAcceptExSockaddrs(*m_client, 0, sizeof(sockaddr_in) + 16,
 			sizeof(sockaddr_in) + 16, (sockaddr**)&plocal, &lLength,
-			(sockaddr**)&premote, &rLength);
+			(sockaddr**)&premote, &rLength);   //对应正常socket中，accept函数。作用：获取客户端地址
 
 		memcpy(m_client->GetLoaclAddr(), plocal, sizeof(sockaddr_in));
 		memcpy(m_client->GetRemoteAddr(), premote, sizeof(sockaddr_in));
@@ -319,7 +320,7 @@ int AcceptOverlapped<op>::AcceptWorker()
 template <Koperator op>
 RecvOverlapped<op>::RecvOverlapped()
 {
-	m_operator = KRecv;
+	m_operator = op;
 	m_worker = ThreadWorker(this, (FUNCTYPE)&RecvOverlapped<op>::RecvWorker);
 	memset(&m_overlapped, 0, sizeof(m_overlapped));
 	m_buffer.resize(1024*265);
@@ -334,7 +335,7 @@ int RecvOverlapped<op>::RecvWorker() {
 template <Koperator op>
 SendOverlapped<op>::SendOverlapped()
 {
-	m_operator = KSend;
+	m_operator = op;
 	m_worker = ThreadWorker(this, (FUNCTYPE)&SendOverlapped<op>::SendWorker);
 	memset(&m_overlapped, 0, sizeof(m_overlapped));
 	m_buffer.resize(1024*256);
@@ -352,7 +353,7 @@ int SendOverlapped<op>::SendWorker() {
 template <Koperator op>
 ErrorOverlapped<op>::ErrorOverlapped()
 {
-	m_operator = KError;
+	m_operator = op;
 	m_worker = ThreadWorker(this, (FUNCTYPE)&ErrorOverlapped<op>::ErrorWorker);
 	memset(&m_overlapped, 0, sizeof(m_overlapped));
 	m_buffer.resize(1024);
