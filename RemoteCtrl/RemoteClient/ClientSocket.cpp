@@ -426,7 +426,7 @@ CClientSocket::CClientSocket():m_nIP(INADDR_ANY), m_nPort(0),m_sock(INVALID_SOCK
 		{0,NULL}
 	};
 
-	for (int i = 0; funcs[i].message != 0; i++)//相当于把映射表,插入到map中去;
+	for (int i = 0; funcs[i].message != 0; i++)
 	{
 		if (m_mapFunc.insert(std::pair<UINT, CClientSocket::MSGFUNC>(funcs[i].message, funcs[i].func)).second == false)
 		{

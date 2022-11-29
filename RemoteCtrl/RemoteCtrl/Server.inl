@@ -169,7 +169,7 @@ bool CServer::StartServic()
 		closesocket(m_sock);
 		m_sock = INVALID_SOCKET;
 		return false;
-	}
+	} 
 	m_hIOCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 4);
 	if (m_hIOCP == NULL) {
 		closesocket(m_sock);
