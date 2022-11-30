@@ -4,7 +4,8 @@
 
 #include "CThread.hpp"
 #include "Queue.hpp"
-
+#include "Packet.h"
+#include "Command.h"
 #pragma warning(disable:4407)
 
 
@@ -74,6 +75,7 @@ public:
 	int Recv();
 	int Send(void* buffer, size_t nSize);
 	int SendData(std::vector<char>& data);
+
 private:
 	SOCKET                            m_sock;
 	DWORD                             m_received;
@@ -88,6 +90,9 @@ private:
 	sockaddr_in       m_raddr;
 	bool              m_isbusy;
 	KSendQueue<std::vector<char>> m_vecSend;  //发送数据队列
+
+	CPacket m_packet;
+	std::list<CPacket> lstPacket;
 };
 
 
@@ -155,7 +160,7 @@ private:
 
 	int threadIocp();
 
-
+	int thread_test(SOCKET socket,CPacket& lstpacket);
 private:
 	ThreadPool                                 m_pool;
 	HANDLE                                     m_hIOCP;

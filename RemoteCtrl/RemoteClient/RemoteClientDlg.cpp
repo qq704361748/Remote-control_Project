@@ -543,7 +543,7 @@ LRESULT CRemoteClientDlg::OnSendPackAck(WPARAM wParam, LPARAM lParam)
 				MessageBox(TEXT("Delete file successful !!!"), TEXT("Congratulation！"), MB_ICONINFORMATION);
 				break;
 			case 1981:
-				MessageBox(TEXT("Connection test successful !!!"), TEXT("Congratulation！"),MB_ICONINFORMATION);
+				MessageBox(TEXT("连接成功 !!!"), TEXT("Congratulation！"),MB_ICONINFORMATION);
 				break;
 			default:
 				TRACE("Unknow data received! %d\r\n", head.sCmd);
