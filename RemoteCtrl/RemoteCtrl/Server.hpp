@@ -29,7 +29,7 @@ public:
 	std::vector<char> m_buffer;
 	ThreadWorker      m_worker; //处理函数
 	CServer*          m_server; //服务器对象
-	CClient*           m_client; //对应的客户端
+	CClient*          m_client; //对应的客户端
 	WSABUF            m_wsabuffer;
 	virtual  ~KOverlapped();
 };

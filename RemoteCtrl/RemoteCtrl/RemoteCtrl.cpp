@@ -66,21 +66,6 @@ int main()
 	return 0;
 }
 
-class COverlapped
-{
-public:
-	OVERLAPPED m_overlapped;
-	DWORD m_operator;
-	char m_buffer[4096];
-	COverlapped()
-	{
-		m_operator = 0;
-		memset(&m_overlapped, 0, sizeof(OVERLAPPED));
-		memset(&m_buffer, 0, sizeof(m_buffer));
-	}
-};
-
-
 
 void iocp()
 {

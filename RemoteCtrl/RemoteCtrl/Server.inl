@@ -14,6 +14,7 @@ CClient::CClient()
 	m_recv(new RECVOVERLAPPED()),
 	m_send(new SENDOVERLAPPED()),
 	m_vecSend(this,(SENDCALLBACK)& CClient::SendData)
+		// m_vecSend(NULL, NULL)
 
 {
 	m_sock = WSASocket(PF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
@@ -206,7 +207,7 @@ bool CServer::NewAccept()
 
 	if (!AcceptEx(m_sock, *pClient, *pClient, 0,
 		sizeof(sockaddr_in) + 16, sizeof(sockaddr_in) + 16,
-		*pClient, *pClient))  //建立连接以获得本地地址和远程地址
+		*pClient, *pClient))  //建立连接以获得本地地址和远程地址   //此处只投递accept的overlapped
 	{
 		TRACE("%d\r\n", WSAGetLastError());
 		if(WSAGetLastError()!= WSA_IO_PENDING) {
