@@ -105,18 +105,27 @@ inline int CClient::Recv()
 	//TODO:解析数据
 	//CTools::Dump((BYTE*)m_buffer.data(), ret);
 
+	//len = m_used;
+	//m_packet = CPacket((BYTE*)m_buffer.data(), len);
+	// CCommand cmd;
+	// cmd.ExcuteCommoand(m_packet.sCmd, lstPacket, m_packet);
+	//
+	// for (auto it = lstPacket.begin();it!=lstPacket.end();it++) {
+	// 	send(m_sock, it->Data(), it->Size(), 0);
+	// }
+	//
+	// closesocket(m_sock);
+
 	len      = m_used;
 	m_packet = CPacket((BYTE*)m_buffer.data(), len);
-	
 
-	CCommand cmd;
-	cmd.ExcuteCommoand(m_packet.sCmd, lstPacket, m_packet);
+	if (m_packet.sCmd == 1981) {
+		auto arcPack = CPacket(1981, NULL, 0);
 
-	for (auto it = lstPacket.begin();it!=lstPacket.end();it++) {
-		send(m_sock, it->Data(), it->Size(), 0);
+		Send((void*)arcPack.Data(), arcPack.Size());
 	}
 
-	return 0;
+	return -1;
 }
 
 inline int CClient::Send(void* buffer, size_t nSize)
@@ -132,6 +141,9 @@ inline int CClient::Send(void* buffer, size_t nSize)
 inline int CClient::SendData(std::vector<char>& data)
 {
 	if (m_vecSend.Size() > 0) {
+		SendWSABuffer()->buf = data.data();
+		SendWSABuffer()->len = data.size();
+
 		int ret = WSASend(m_sock, SendWSABuffer(), 1, &m_received, m_flags,
 		                  &m_send->m_overlapped, NULL);
 		if (ret != 0 && (WSAGetLastError() != WSA_IO_PENDING)) {
@@ -300,8 +312,7 @@ template <Koperator op>
 AcceptOverlapped<op>::AcceptOverlapped()
 {
 	m_operator = KAccept;
-	m_worker   =
-			ThreadWorker(this, (FUNCTYPE)&AcceptOverlapped<op>::AcceptWorker);
+	m_worker   = ThreadWorker(this, (FUNCTYPE)&AcceptOverlapped<op>::AcceptWorker);
 	memset(&m_overlapped, 0, sizeof(m_overlapped));
 	m_buffer.resize(1024);
 	m_server = NULL;
@@ -366,7 +377,9 @@ template <Koperator op>
 int SendOverlapped<op>::SendWorker()
 {
 	//TODO:
-
+	// m_wsabuffer = ;
+	// this->m_client->SendData();
+	TRACE("发送成功！\r\n");
 
 	return -1;
 }
